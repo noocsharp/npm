@@ -50,53 +50,22 @@ gen(char *buf)
     }
 }
 
-int
-getpassphrase(char *buf)
-{
-    struct termios old, new;
-    char *c;
-    fputs("Passphrase: ", stderr);
-
-    if (isatty(STDIN_FILENO)) {
-        if (tcgetattr(STDIN_FILENO, &old) == -1)
-            return -1;
-        new = old;
-        new.c_lflag &= ~(ICANON | ECHO);
-        if (tcsetattr(STDIN_FILENO, TCSANOW, &new) == -1)
-            return -1;
-    }
-
-    if (fgets(buf, PASSPHRASE_MAX_LEN, stdin) == NULL)
-        return -1;
-
-    if (isatty(STDIN_FILENO)) {
-        if (tcsetattr(STDIN_FILENO, TCSANOW, &old) == -1)
-            return -1;
-
-        putc('\n', stderr);
-    }
-    if ((c = strchr(buf, '\n')) == NULL)
-        die("passphrase too long");
-
-    *c = '\0';
-}
-
 int main(int argc, char *argv[]) {
     char encrypted[SALT_LEN + PASSWORD_MAX_LEN];
-    char passphrase[PASSPHRASE_MAX_LEN];
     char key[KEY_LEN];
     char nonce[NONCE_LEN];
     char salt[SALT_LEN];
     int vlen;
 
-    if (argc == 2 && strcmp(argv[1], "-g") == 0) {
-        if (getpassphrase(passphrase) == -1)
-            die("failed to read password");
+    /* TODO add usage */
+    if (argc != 3)
+        die("invalid args");
 
+    if (strcmp(argv[1], "-g") == 0) {
         if (getrandom(salt, SALT_LEN, 0) < SALT_LEN)
             die("failed to generate salt");
 
-        if (pkcs5_pbkdf2(passphrase, strlen(passphrase), salt, SALT_LEN, key,
+        if (pkcs5_pbkdf2(argv[2], strlen(argv[2]), salt, SALT_LEN, key,
                     KEY_LEN, ROUNDS) == -1)
             die("key derivation failed");
 
@@ -136,10 +105,7 @@ int main(int argc, char *argv[]) {
         fwrite(nonce, sizeof(char), NONCE_LEN, stdout);
         fwrite(salt, sizeof(char), SALT_LEN, stdout);
         fwrite(encrypted, sizeof(char), SALT_LEN + len, stdout);
-    } else if (argc == 2 && strcmp(argv[1], "-d") == 0) {
-        if (getpassphrase(passphrase) == -1)
-            die("failed to read password");
-
+    } else if (strcmp(argv[1], "-d") == 0) {
         if (fread(nonce, sizeof(char), NONCE_LEN, stdin) < NONCE_LEN)
             die("failed to read nonce");
 
@@ -149,7 +115,7 @@ int main(int argc, char *argv[]) {
         len = fread(encrypted, sizeof(char), SALT_LEN + PASSWORD_MAX_LEN,
                 stdin) - SALT_LEN - 1;
 
-        if (pkcs5_pbkdf2(passphrase, strlen(passphrase), salt, SALT_LEN, key,
+        if (pkcs5_pbkdf2(argv[2], strlen(argv[2]), salt, SALT_LEN, key,
                     KEY_LEN, ROUNDS) == -1)
             die("key derivation failed");
 
