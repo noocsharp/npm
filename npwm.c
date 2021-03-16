@@ -82,7 +82,7 @@ getpassphrase(char *buf)
 }
 
 int main(int argc, char *argv[]) {
-    char password[PASSWORD_MAX_LEN];
+    char encrypted[SALT_LEN + PASSWORD_MAX_LEN];
     char passphrase[PASSPHRASE_MAX_LEN];
     char key[KEY_LEN];
     char nonce[NONCE_LEN];
@@ -127,9 +127,14 @@ int main(int argc, char *argv[]) {
                     die("NPWM_VALID may not contain duplicate characters");
         }
 
-        memset(password, 0, PASSWORD_MAX_LEN);
-        gen(password);
+        memcpy(encrypted, salt, SALT_LEN);
+        memset(encrypted + SALT_LEN, 0, PASSWORD_MAX_LEN);
+        gen(encrypted + SALT_LEN);
 
-        br_chacha20_ct_run(key, nonce, 0, password, len);
+        br_chacha20_ct_run(key, nonce, 0, encrypted, SALT_LEN + len);
+
+        fwrite(nonce, sizeof(char), NONCE_LEN, stdout);
+        fwrite(salt, sizeof(char), SALT_LEN, stdout);
+        fwrite(encrypted, sizeof(char), SALT_LEN + len, stdout);
     }
 }
