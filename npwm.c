@@ -13,55 +13,19 @@
 #include "pkcs5_pbkdf2.h"
 #include "util.h"
 
-char *valid;
-int len;
-
-int
-isvalid(char c)
-{
-    int len;
-    if (strcmp(valid, "print") == 0)
-        return isprint(c);
-    else if (strcmp(valid, "alnum") == 0)
-        return isalnum(c);
-    else {
-        /* TODO validate valid */
-        for (int i = 0; i < strlen(valid); i++) {
-            if (c == valid[i])
-                return 1;
-        }
-        
-        return 0;
-    }
-}
-
-int
-gen(char *buf)
-{
-    int i = 0;
-    char c;
-    while (i < len) {
-        getrandom(&c, 1, 0);
-
-        if (isvalid(c)) {
-            buf[i] = c;
-            i++;
-        }
-    }
-}
-
 int main(int argc, char *argv[]) {
     char encrypted[SALT_LEN + PASSWORD_MAX_LEN];
     char key[KEY_LEN];
     char nonce[NONCE_LEN];
     char salt[SALT_LEN];
-    int vlen;
+    char *c;
+    size_t len;
 
     /* TODO add usage */
     if (argc != 3)
         die("invalid args");
 
-    if (strcmp(argv[1], "-g") == 0) {
+    if (strcmp(argv[1], "-e") == 0) {
         if (getrandom(salt, SALT_LEN, 0) < SALT_LEN)
             die("failed to generate salt");
 
@@ -73,32 +37,15 @@ int main(int argc, char *argv[]) {
             die("failed to generate nonce");
 
         errno = 0;
-        if (!getenv("NPWM_LENGTH"))
-            len = DEFAULT_LEN;
-        else {
-            len = strtol(getenv("NPWM_LENGTH"), NULL, 10);
-            if (errno || len <= 0 || len > PASSWORD_MAX_LEN)
-                die("invalid value for NPWM_LENGTH:");
-        }
-
-        if ((valid = getenv("NPWM_VALID")) == NULL)
-            valid = "print";
-
-        if ((vlen = strlen(valid)) > 0x7F - 0x20)
-            die("NPWM_VALID should not contain duplicate or non-printable characters");
-
-        for (int i = 0; i < vlen; i++) {
-            if (!isprint(valid[i]))
-                die("NPWM_VALID may not contain non-printable characters");
-
-            for (int j = 0; j < i; j++)
-                if (valid[i] == valid[j])
-                    die("NPWM_VALID may not contain duplicate characters");
-        }
 
         memcpy(encrypted, salt, SALT_LEN);
         memset(encrypted + SALT_LEN, 0, PASSWORD_MAX_LEN);
-        gen(encrypted + SALT_LEN);
+
+        fgets(encrypted + SALT_LEN, PASSWORD_MAX_LEN, stdin);
+        if ((c = strchr(encrypted + SALT_LEN, '\n')) == NULL)
+            die("password is too long");
+
+        *c = 0;
 
         br_chacha20_ct_run(key, nonce, 0, encrypted, SALT_LEN + len);
 
