@@ -136,5 +136,28 @@ int main(int argc, char *argv[]) {
         fwrite(nonce, sizeof(char), NONCE_LEN, stdout);
         fwrite(salt, sizeof(char), SALT_LEN, stdout);
         fwrite(encrypted, sizeof(char), SALT_LEN + len, stdout);
+    } else if (argc == 2 && strcmp(argv[1], "-d") == 0) {
+        if (getpassphrase(passphrase) == -1)
+            die("failed to read password");
+
+        if (fread(nonce, sizeof(char), NONCE_LEN, stdin) < NONCE_LEN)
+            die("failed to read nonce");
+
+        if (fread(salt, sizeof(char), SALT_LEN, stdin) < SALT_LEN)
+            die("failed to read salt");
+
+        len = fread(encrypted, sizeof(char), SALT_LEN + PASSWORD_MAX_LEN,
+                stdin) - SALT_LEN - 1;
+
+        if (pkcs5_pbkdf2(passphrase, strlen(passphrase), salt, SALT_LEN, key,
+                    KEY_LEN, ROUNDS) == -1)
+            die("key derivation failed");
+
+        br_chacha20_ct_run(key, nonce, 0, encrypted, SALT_LEN + len);
+
+        if (memcmp(encrypted, salt, SALT_LEN) != 0)
+            die("invalid input!");
+
+        fwrite(encrypted + SALT_LEN, sizeof(char), len, stdout);
     }
 }
