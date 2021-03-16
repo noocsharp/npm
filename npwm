@@ -32,14 +32,6 @@ pw_add() {
 
     [ "$pass" ] || die "Failed to generate a password"
 
-    # Mimic the use of an array for storing arguments by... using
-    # the function's argument list. This is very apt isn't it?
-    if [ "$PASH_KEYID" ]; then
-        set -- --trust-model always -aer "$PASH_KEYID"
-    else
-        set -- -c
-    fi
-
     # Use 'gpg' to store the password in an encrypted file.
     # A heredoc is used here instead of a 'printf' to avoid
     # leaking the password through the '/proc' filesystem.
@@ -47,7 +39,7 @@ pw_add() {
     # Heredocs are sometimes implemented via temporary files,
     # however this is typically done using 'mkstemp()' which
     # is more secure than a leak in '/proc'.
-    "$gpg" "$@" -o "$name.gpg" <<-EOF &&
+    "$gpg" -o "$name.gpg" <<-EOF &&
 		$pass
 	EOF
     printf '%s\n' "Saved '$name' to the store."
@@ -162,7 +154,6 @@ pash 2.3.0 - simple password manager.
 => [s]how [name] - Show password for an entry.
 => [t]ree        - List all entries in a tree.
 
-Using a key pair:  export PASH_KEYID=XXXXXXXX
 Password length:   export PASH_LENGTH=50
 Password pattern:  export PASH_PATTERN=_A-Z-a-z-0-9
 Store location:    export PASH_DIR=~/.local/share/pash
