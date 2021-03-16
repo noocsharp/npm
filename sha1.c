@@ -2,7 +2,7 @@
 #include <stdint.h>
 #include <string.h>
 
-#include "../sha1.h"
+#include "sha1.h"
 
 static uint32_t rol(uint32_t n, int k) { return (n << k) | (n >> (32-k)); }
 #define F0(b,c,d) (d ^ (b & (c ^ d)))

@@ -14,6 +14,7 @@
  * OR IN CONNECTION WITH THE USE OR PERFORMANCE OF THIS SOFTWARE.
  */
 
+#include <sys/random.h>
 #include <sys/types.h>
 
 #include <string.h>
@@ -32,15 +33,15 @@ static void
 hmac_sha1(const u_int8_t *text, size_t text_len, const u_int8_t *key,
     size_t key_len, u_int8_t digest[SHA1_DIGEST_LENGTH])
 {
-	SHA1_CTX ctx;
+	struct sha1 ctx;
 	u_int8_t k_pad[SHA1_BLOCK_LENGTH];
 	u_int8_t tk[SHA1_DIGEST_LENGTH];
 	int i;
 
 	if (key_len > SHA1_BLOCK_LENGTH) {
-		SHA1Init(&ctx);
-		SHA1Update(&ctx, key, key_len);
-		SHA1Final(tk, &ctx);
+		sha1_init(&ctx);
+		sha1_update(&ctx, key, key_len);
+		sha1_sum(&ctx, tk);
 
 		key = tk;
 		key_len = SHA1_DIGEST_LENGTH;
@@ -51,20 +52,20 @@ hmac_sha1(const u_int8_t *text, size_t text_len, const u_int8_t *key,
 	for (i = 0; i < SHA1_BLOCK_LENGTH; i++)
 		k_pad[i] ^= 0x36;
 
-	SHA1Init(&ctx);
-	SHA1Update(&ctx, k_pad, SHA1_BLOCK_LENGTH);
-	SHA1Update(&ctx, text, text_len);
-	SHA1Final(digest, &ctx);
+	sha1_init(&ctx);
+	sha1_update(&ctx, k_pad, SHA1_BLOCK_LENGTH);
+	sha1_update(&ctx, text, text_len);
+	sha1_sum(&ctx, digest);
 
 	bzero(k_pad, sizeof k_pad);
 	bcopy(key, k_pad, key_len);
 	for (i = 0; i < SHA1_BLOCK_LENGTH; i++)
 		k_pad[i] ^= 0x5c;
 
-	SHA1Init(&ctx);
-	SHA1Update(&ctx, k_pad, SHA1_BLOCK_LENGTH);
-	SHA1Update(&ctx, digest, SHA1_DIGEST_LENGTH);
-	SHA1Final(digest, &ctx);
+	sha1_init(&ctx);
+	sha1_update(&ctx, k_pad, SHA1_BLOCK_LENGTH);
+	sha1_update(&ctx, digest, SHA1_DIGEST_LENGTH);
+	sha1_sum(&ctx, digest);
 }
 
 /*
@@ -110,7 +111,8 @@ pkcs5_pbkdf2(const char *pass, size_t pass_len, const uint8_t *salt,
 		key += r;
 		key_len -= r;
 	};
-	freezero(asalt, salt_len + 4);
+    explicit_bzero(asalt, salt_len + 4);
+	free(asalt);
 	explicit_bzero(d1, sizeof(d1));
 	explicit_bzero(d2, sizeof(d2));
 	explicit_bzero(obuf, sizeof(obuf));
@@ -119,6 +121,6 @@ pkcs5_pbkdf2(const char *pass, size_t pass_len, const uint8_t *salt,
 
 bad:
 	/* overwrite with random in case caller doesn't check return code */
-	arc4random_buf(key, key_len);
+    getrandom(key, key_len, 0);
 	return -1;
 }

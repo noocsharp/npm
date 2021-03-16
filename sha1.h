@@ -6,7 +6,7 @@ struct sha1 {
 	uint8_t buf[64]; /* message block buffer */
 };
 
-enum { SHA1_DIGEST_LENGTH = 20 };
+enum { SHA1_DIGEST_LENGTH = 20, SHA1_BLOCK_LENGTH = 64 };
 
 /* reset state */
 void sha1_init(void *ctx);
