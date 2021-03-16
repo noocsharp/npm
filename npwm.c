@@ -73,12 +73,12 @@ getpassphrase(char *buf)
         if (tcsetattr(STDIN_FILENO, TCSANOW, &old) == -1)
             return -1;
 
-        putchar('\n');
+        putc('\n', stderr);
     }
     if ((c = strchr(buf, '\n')) == NULL)
         die("passphrase too long");
 
-    c = '\0';
+    *c = '\0';
 }
 
 int main(int argc, char *argv[]) {
