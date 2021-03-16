@@ -104,9 +104,13 @@ int main(int argc, char *argv[]) {
             die("failed to generate nonce");
 
         errno = 0;
-        len = strtol(getenv("NPWM_LENGTH"), NULL, 10);
-        if (errno || len <= 0 || len > PASSWORD_MAX_LEN)
-            die("invalid value for NPWM_LENGTH:");
+        if (!getenv("NPWM_LENGTH"))
+            len = DEFAULT_LEN;
+        else {
+            len = strtol(getenv("NPWM_LENGTH"), NULL, 10);
+            if (errno || len <= 0 || len > PASSWORD_MAX_LEN)
+                die("invalid value for NPWM_LENGTH:");
+        }
 
         if ((valid = getenv("NPWM_VALID")) == NULL)
             valid = "print";
