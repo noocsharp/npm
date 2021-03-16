@@ -9,15 +9,9 @@
 #include <unistd.h>
 
 #include "chacha20.h"
+#include "common.h"
 #include "pkcs5_pbkdf2.h"
 #include "util.h"
-
-#define PASSWORD_MAX_LEN 512
-#define PASSPHRASE_MAX_LEN 512
-#define KEY_LEN 32
-#define NONCE_LEN 12
-#define SALT_LEN 8
-#define ROUNDS 2000
 
 char *valid;
 int len;
