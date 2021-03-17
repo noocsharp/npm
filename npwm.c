@@ -46,6 +46,7 @@ int main(int argc, char *argv[]) {
             die("password is too long");
 
         *c = 0;
+        len = c - encrypted - SALT_LEN + 1;
 
         br_chacha20_ct_run(key, nonce, 0, encrypted, SALT_LEN + len);
 
