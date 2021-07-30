@@ -10,68 +10,156 @@
 
 #include "chacha20.h"
 #include "common.h"
-#include "pkcs5_pbkdf2.h"
+#include "argon2/argon2.h"
 #include "util.h"
 
+char *argv0;
+
+char data[SALT_LEN + PASSWORD_MAX_LEN + 1];
+char encryptee[PASSWORD_MAX_LEN];
+char encryptor[PASSWORD_MAX_LEN+1];
+char key[KEY_LEN];
+char nonce[NONCE_LEN];
+char salt[SALT_LEN];
+
+void
+clear()
+{
+	memset(data, 0, sizeof(data));
+	memset(encryptee, 0, sizeof(encryptee));
+	memset(encryptor, 0, sizeof(encryptor));
+	memset(key, 0, sizeof(key));
+	memset(nonce, 0, sizeof(nonce));
+	memset(salt, 0, sizeof(salt));
+}
+
+ssize_t
+get_password(char *buf)
+{
+	fgets(buf, PASSWORD_MAX_LEN+1, stdin);
+	// XXX: is strlen problematic because it isn't constant time and acts on a secret?
+	size_t len = strlen(buf);
+
+	/* the last character of the line should be '\n', which should not be
+	 * included in the password */
+	if (len == PASSWORD_MAX_LEN && buf[PASSWORD_MAX_LEN-1] != '\n')
+		return -1;
+
+	buf[len-1] = '\0';
+	return len - 1;
+}
+
+void
+error(const char *s)
+{
+	fprintf(stderr, "%s: %s\n", argv0, s);
+}
+
 int main(int argc, char *argv[]) {
-    char encrypted[SALT_LEN + PASSWORD_MAX_LEN];
-    char key[KEY_LEN];
-    char nonce[NONCE_LEN];
-    char salt[SALT_LEN];
-    char *c;
-    size_t len;
+	char *c;
+	size_t len;
+	FILE *file = NULL;
 
-    /* TODO add usage */
-    if (argc != 3)
-        die("invalid args");
+	/* TODO add usage */
+	if (argc == 2 && strcmp(argv[1], "-e"))
+		die("invalid args");
 
-    if (strcmp(argv[1], "-e") == 0) {
-        if (getrandom(salt, SALT_LEN, 0) < SALT_LEN)
-            die("failed to generate salt");
+	if (argc == 3 && strcmp(argv[1], "-d"))
+		die("invalid args");
 
-        if (pkcs5_pbkdf2(argv[2], strlen(argv[2]), salt, SALT_LEN, key,
-                    KEY_LEN, ROUNDS) == -1)
-            die("key derivation failed");
+	if (argc < 2)
+		die("invalid args");
 
-        if (getrandom(nonce, NONCE_LEN, 0) < NONCE_LEN)
-            die("failed to generate nonce");
+	argv0 = argv[0];
 
-        errno = 0;
+	if (strcmp(argv[1], "-e") == 0) {
+		if (getrandom(salt, SALT_LEN, 0) < SALT_LEN) {
+			error("failed to generate salt");
+			goto fail;
+		}
 
-        memcpy(encrypted, salt, SALT_LEN);
-        memset(encrypted + SALT_LEN, 0, PASSWORD_MAX_LEN);
+		len = get_password(encryptor);
+		if (len < 0) {
+			error("master password too long");
+			goto fail;
+		}
 
-        fgets(encrypted + SALT_LEN, PASSWORD_MAX_LEN, stdin);
-        if ((c = strchr(encrypted + SALT_LEN, '\n')) == NULL)
-            die("password is too long");
+		if (argon2id_hash_raw(T_COST, M_COST, PARALLELISM, encryptor, len, salt, SALT_LEN, key, KEY_LEN) < 0) {
+			error("key derivation failed");
+			goto fail;
+		}
 
-        *c = 0;
-        len = c - encrypted - SALT_LEN + 1;
+		if (getrandom(nonce, NONCE_LEN, 0) < NONCE_LEN) {
+			error("failed to generate nonce");
+			goto fail;
+		}
 
-        br_chacha20_ct_run(key, nonce, 0, encrypted, SALT_LEN + len);
+		memcpy(data, salt, SALT_LEN);
 
-        fwrite(nonce, sizeof(char), NONCE_LEN, stdout);
-        fwrite(salt, sizeof(char), SALT_LEN, stdout);
-        fwrite(encrypted, sizeof(char), SALT_LEN + len, stdout);
-    } else if (strcmp(argv[1], "-d") == 0) {
-        if (fread(nonce, sizeof(char), NONCE_LEN, stdin) < NONCE_LEN)
-            die("failed to read nonce");
+		len = get_password(encryptee);
+		if (len < 0) {
+			error("password to encrypt is too long");
+			goto fail;
+		}
 
-        if (fread(salt, sizeof(char), SALT_LEN, stdin) < SALT_LEN)
-            die("failed to read salt");
+		memset(data, 0, SALT_LEN + PASSWORD_MAX_LEN);
+		memcpy(data, salt, SALT_LEN);
+		memcpy(data + SALT_LEN, encryptee, PASSWORD_MAX_LEN);
 
-        len = fread(encrypted, sizeof(char), SALT_LEN + PASSWORD_MAX_LEN,
-                stdin) - SALT_LEN - 1;
+		br_chacha20_ct_run(key, nonce, 0, data, SALT_LEN + PASSWORD_MAX_LEN);
 
-        if (pkcs5_pbkdf2(argv[2], strlen(argv[2]), salt, SALT_LEN, key,
-                    KEY_LEN, ROUNDS) == -1)
-            die("key derivation failed");
+		fwrite(nonce, sizeof(char), NONCE_LEN, stdout);
+		fwrite(salt, sizeof(char), SALT_LEN, stdout);
+		fwrite(data, sizeof(char), SALT_LEN + PASSWORD_MAX_LEN, stdout);
+	} else if (strcmp(argv[1], "-d") == 0) {
+		file = fopen(argv[2], "r");
+		if (file == NULL) {
+			error("failed to open file");
+			goto fail;
+		}
+			
+		len = fread(nonce, sizeof(char), NONCE_LEN, file);
+		if (len < NONCE_LEN) {
+			error("failed to read nonce");
+			goto fail;
+		}
 
-        br_chacha20_ct_run(key, nonce, 0, encrypted, SALT_LEN + len);
+		len = fread(salt, sizeof(char), SALT_LEN, file);
+		if (len < SALT_LEN) {
+			error("failed to read salt");
+			goto fail;
+		}
 
-        if (memcmp(encrypted, salt, SALT_LEN) != 0)
-            die("invalid input!");
+		len = fread(data, sizeof(char), SALT_LEN + PASSWORD_MAX_LEN, file);
+		if (len < SALT_LEN + PASSWORD_MAX_LEN) {
+			error("failed to read encrypted data");
+			goto fail;
+		}
 
-        fwrite(encrypted + SALT_LEN, sizeof(char), len, stdout);
-    }
+		len = get_password(encryptor);
+
+		if (argon2id_hash_raw(T_COST, M_COST, PARALLELISM, encryptor, len, salt, SALT_LEN, key, KEY_LEN) < 0) {
+			error("key derivation failed");
+			goto fail;
+		}
+
+		br_chacha20_ct_run(key, nonce, 0, data, SALT_LEN + PASSWORD_MAX_LEN);
+
+		if (memcmp(data, salt, SALT_LEN) != 0) {
+			error("incorrect master password");
+			goto fail;
+		}
+
+		puts(data + SALT_LEN);
+		fclose(file);
+	}
+
+	clear();
+	return 0;
+
+fail:
+	if (file)
+		fclose(file);
+	clear();
+	return 1;
 }
