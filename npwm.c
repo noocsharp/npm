@@ -1,12 +1,8 @@
-#include <ctype.h>
-#include <errno.h>
 #include <string.h>
 #include <stdint.h>
 #include <stdio.h>
 #include <stdlib.h>
 #include <sys/random.h>
-#include <termios.h>
-#include <unistd.h>
 
 #include "chacha20.h"
 #include "common.h"
