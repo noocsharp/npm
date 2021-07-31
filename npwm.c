@@ -51,22 +51,35 @@ error(const char *s)
 	fprintf(stderr, "%s: %s\n", argv0, s);
 }
 
+void
+usage()
+{
+	fprintf(stderr, "%s: [-d file] | [-e]\n", argv0);
+	exit(1);
+}
+
 int main(int argc, char *argv[]) {
 	char *c;
 	size_t len;
 	FILE *file = NULL;
 
-	/* TODO add usage */
-	if (argc == 2 && strcmp(argv[1], "-e"))
-		die("invalid args");
-
-	if (argc == 3 && strcmp(argv[1], "-d"))
-		die("invalid args");
-
-	if (argc < 2)
-		die("invalid args");
-
 	argv0 = argv[0];
+
+	if (argc == 1)
+		usage();
+
+	if (strcmp(argv[1], "-e") && strcmp(argv[1], "-d"))
+		usage();
+
+	if (!strcmp(argv[1], "-e") && argc != 2) {
+		error("option -e does not take an argument");
+		usage();
+	}
+
+	if (!strcmp(argv[1], "-d") && argc != 3) {
+		error("option -d takes exactly 1 argument");
+		usage();
+	}
 
 	if (strcmp(argv[1], "-e") == 0) {
 		if (getrandom(salt, SALT_LEN, 0) < SALT_LEN) {
