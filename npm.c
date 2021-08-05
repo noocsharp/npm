@@ -1,7 +1,9 @@
+#include <errno.h>
 #include <string.h>
 #include <stdint.h>
 #include <stdio.h>
 #include <stdlib.h>
+#include <sys/mman.h>
 #include <sys/random.h>
 
 #include "chacha20.h"
@@ -48,7 +50,7 @@ get_password(char *buf)
 void
 error(const char *s)
 {
-	fprintf(stderr, "%s: %s\n", argv0, s);
+	fprintf(stderr, "%s: %s", argv0, s);
 }
 
 void
@@ -79,6 +81,31 @@ int main(int argc, char *argv[]) {
 	if (!strcmp(argv[1], "-d") && argc != 3) {
 		error("option -d takes exactly 1 argument");
 		usage();
+	}
+
+	/* we want to prevent secret data from being swapped to disk */
+	if (mlock(data, sizeof(data)) < 0) {
+		fprintf(stderr, "mlock failed: %s", strerror(errno));
+	}
+
+	if (mlock(encryptor, sizeof(encryptor)) < 0) {
+		fprintf(stderr, "mlock failed: %s", strerror(errno));
+	}
+
+	if (mlock(encryptee, sizeof(encryptee)) < 0) {
+		fprintf(stderr, "mlock failed: %s", strerror(errno));
+	}
+
+	if (mlock(key, sizeof(key)) < 0) {
+		fprintf(stderr, "mlock failed: %s", strerror(errno));
+	}
+
+	if (mlock(nonce, sizeof(nonce)) < 0) {
+		fprintf(stderr, "mlock failed: %s", strerror(errno));
+	}
+
+	if (mlock(salt, sizeof(salt)) < 0) {
+		fprintf(stderr, "mlock failed: %s", strerror(errno));
 	}
 
 	if (strcmp(argv[1], "-e") == 0) {

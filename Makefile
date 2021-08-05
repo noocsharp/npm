@@ -1,7 +1,7 @@
 LIBS = argon2/argon2.a
-SRC = chacha20.c npwm.c util.c
+SRC = chacha20.c npm.c util.c
 OBJ = $(SRC:%.c=%.o)
-EXE = npwm-core
+EXE = npm-core
 
 $(EXE): $(LIBS) $(OBJ)
 	$(CC) $(OBJ) $(LIBS) -o $@
