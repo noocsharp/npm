@@ -20,17 +20,6 @@ char key[KEY_LEN];
 char nonce[NONCE_LEN];
 char salt[SALT_LEN];
 
-void
-clear()
-{
-	memset(data, 0, sizeof(data));
-	memset(encryptee, 0, sizeof(encryptee));
-	memset(encryptor, 0, sizeof(encryptor));
-	memset(key, 0, sizeof(key));
-	memset(nonce, 0, sizeof(nonce));
-	memset(salt, 0, sizeof(salt));
-}
-
 ssize_t
 get_password(char *buf)
 {
@@ -190,12 +179,10 @@ int main(int argc, char *argv[]) {
 		fclose(file);
 	}
 
-	clear();
 	return 0;
 
 fail:
 	if (file)
 		fclose(file);
-	clear();
 	return 1;
 }
