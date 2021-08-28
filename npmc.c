@@ -1,6 +1,8 @@
+#include <limits.h>
 #include <stdint.h>
 #include <stdbool.h>
 #include <stdio.h>
+#include <stdlib.h>
 #include <string.h>
 #include <sys/socket.h>
 #include <sys/un.h>
@@ -15,6 +17,8 @@
 
 char answer[PASSWORD_MAX_LEN + 1];
 int answerlen = 0;
+
+char abspath[PATH_MAX];
 
 int
 xwrite(int fd, char *buf, size_t count)
@@ -45,6 +49,9 @@ read_answer(int fd)
 		if (ret == -1)
 			return ret;
 
+		if (ret == 0)
+			break;
+
 		answerlen += ret;
 		ptr += ret;
 	}
@@ -73,7 +80,12 @@ main(int argc, char *argv[])
 		goto closesock;
 	}
 
-	xwrite(sock, argv[1], strlen(argv[1]) + 1); // include terminator
+	if (realpath(argv[1], abspath) == NULL) {
+		fprintf(stderr, "failed to get absolute path of %s\n", argv[1]);
+		goto closesock;
+	}
+
+	xwrite(sock, abspath, strlen(abspath) + 1); // include terminator
 
 	read_answer(sock);
 
