@@ -211,10 +211,12 @@ agent()
 	run_core();
 }
 
+bool running = true;
+
 void
-remove_socket(void)
+handler(int sig)
 {
-	unlink(SOCKPATH);
+	running = false;
 }
 
 int
@@ -226,6 +228,13 @@ main(int argc, char *argv[])
 	};
 	int ret;
 
+	struct sigaction sa = {
+		.sa_handler = handler,
+	};
+
+	sigaction(SIGINT, &sa, NULL);
+	sigaction(SIGTERM, &sa, NULL);
+
 	int sock = socket(AF_UNIX, SOCK_STREAM, 0);
 	if (sock == -1) {
 		fprintf(stderr, "failed to create socket: %s\n", strerror(errno));
@@ -236,9 +245,6 @@ main(int argc, char *argv[])
         fprintf(stderr, "failed to bind to socket: %s\n", strerror(errno));
         goto error;
     }
-
-    if (atexit(&remove_socket) != 0)
-    	goto error;
 
     if (listen(sock, 50) == -1) {
         fprintf(stderr, "failed to set socket to listening: %s\n", strerror(errno));
@@ -257,7 +263,7 @@ main(int argc, char *argv[])
     fds[TIMER].events = POLLIN;
     fds[CLIENT].fd = -1;
 
-    while (1) {
+    while (running) {
     	if (poll(fds, sizeof(fds) / sizeof(fds[0]), -1) == -1) {
     		fprintf(stderr, "poll failed: %s", strerror(errno));
     		goto error;
@@ -315,5 +321,6 @@ main(int argc, char *argv[])
 error:
 	close(sock);
 error_socket:
+	unlink(SOCKPATH);
 	return 1;
 }
