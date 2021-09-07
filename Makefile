@@ -5,6 +5,9 @@ PREFIX = /usr/local
 LIBS = argon2/argon2.a
 SRC = chacha20.c npm.c util.c
 OBJ = $(SRC:%.c=%.o)
+NPM_CORE = "npm-core"
+
+CFLAGS = '-DNPM_CORE=$(NPM_CORE)'
 
 all: npm-core npm-agent npmc
 
@@ -18,7 +21,7 @@ npmc: npmc.o
 	$(CC) -static npmc.o -o $@
 
 .c.o:
-	$(CC) -c $< -o $@
+	$(CC) $(CFLAGS) -c $< -o $@
 
 install:
 	install -Dm755 -t $(DESTDIR)$(PREFIX)/bin npm npm-core npmc npm-agent

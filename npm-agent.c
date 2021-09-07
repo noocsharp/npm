@@ -36,7 +36,7 @@
 #define TIMER 1
 #define CLIENT 2
 
-char *corecmd[] = { "./npm-core", "-d", NULL, NULL };
+char *corecmd[] = { NPM_CORE, "-d", NULL, NULL };
 //char *const getpasscmd[] = { "dmenu", "-P", "-p", "Password:", NULL };
 char *const getpasscmd[] = { "bemenu", "-x", "-p", "Password:", NULL };
 
