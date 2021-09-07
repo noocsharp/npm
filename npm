@@ -2,6 +2,9 @@
 #
 # pash - simple password manager.
 
+core="/home/nihal/projects/npm/npm-core"
+npmc="/home/nihal/projects/npm/npmc"
+
 pw_add() {
     name=$1
 
@@ -32,32 +35,39 @@ pw_add() {
 
     [ "$pass" ] || die "Failed to generate a password"
 
+    # Mimic the use of an array for storing arguments by... using
+    # the function's argument list. This is very apt isn't it?
+    if [ "$PASH_KEYID" ]; then
+        set -- --trust-model always -aer "$PASH_KEYID"
+    else
+        set -- -c
+    fi
+
     # Use 'gpg' to store the password in an encrypted file.
     # A heredoc is used here instead of a 'printf' to avoid
     # leaking the password through the '/proc' filesystem.
     #
     # Heredocs are sometimes implemented via temporary files,
     # however this is typically done using 'mkstemp()' which
-    # is more secure than a leak in '/proc'.
-    "$gpg" -o "$name.gpg" <<-EOF &&
+    # is more secure than '/proc'.
+    printf "got here: %s\n" "$name"
+    "$core" -e > "$name.npm" <<-EOF && \
+        printf '%s\n' "Saved '$name' to the store."
+		$(echo "" | bemenu -x -p "Passphrase:")
 		$pass
 	EOF
-    printf '%s\n' "Saved '$name' to the store."
+    printf "got here2\n"
 }
 
 pw_del() {
     yn "Delete pass file '$1'?" && {
-        rm -f "$1.gpg"
-
-        # Remove empty parent directories of a password
-        # entry. It's fine if this fails as it means that
-        # another entry also lives in the same directory.
-        rmdir -p "${1%/*}" 2>/dev/null || :
+        rm -f "$1.npm"
+        rmdir -p "${1%/*}" 2>/dev/null
     }
 }
 
 pw_show() {
-    "$gpg" -dq "$1.gpg"
+    "$npmc" "$1.npm"
 }
 
 pw_copy() {
@@ -82,14 +92,14 @@ pw_copy() {
 }
 
 pw_list() {
-    find . -type f -name \*.gpg | sed 's/..//;s/\.gpg$//'
+    find . -type f -name \*.npm | sed 's/..//;s/\.npm$//'
 }
 
 pw_tree() {
     command -v tree >/dev/null 2>&1 ||
         die "'tree' command not found"
 
-    tree --noreport | sed 's/\.gpg$//'
+    tree --noreport | sed 's/\.npm$//'
 }
 
 yn() {
@@ -154,17 +164,21 @@ pash 2.3.0 - simple password manager.
 => [s]how [name] - Show password for an entry.
 => [t]ree        - List all entries in a tree.
 
+Using a key pair:  export PASH_KEYID=XXXXXXXX
 Password length:   export PASH_LENGTH=50
 Password pattern:  export PASH_PATTERN=_A-Z-a-z-0-9
 Store location:    export PASH_DIR=~/.local/share/pash
 Clipboard tool:    export PASH_CLIP='xclip -sel c'
 Clipboard timeout: export PASH_TIMEOUT=15 ('off' to disable)
 "
-exit 0
+exit 1
 }
 
 main() {
-    : "${PASH_DIR:=${XDG_DATA_HOME:=$HOME/.local/share}/pash}"
+    : "${NPM_DIR:=${XDG_DATA_HOME:=$HOME/.local/share}/npm}"
+
+    [ "$1" = '-?' ] || [ -z "$1" ] &&
+        usage
 
     # Look for both 'gpg' and 'gpg2',
     # preferring 'gpg2' if it is available.
@@ -174,19 +188,19 @@ main() {
     [ "$gpg" ] ||
         die "GPG not found"
 
-    mkdir -p "$PASH_DIR" ||
+    mkdir -p "$NPM_DIR" ||
         die "Couldn't create password directory"
 
-    cd "$PASH_DIR" ||
+    cd "$NPM_DIR" ||
         die "Can't access password directory"
 
     glob "$1" '[acds]*' && [ -z "$2" ] &&
         die "Missing [name] argument"
 
-    glob "$1" '[cds]*' && [ ! -f "$2.gpg" ] &&
+    glob "$1" '[cds]*' && [ ! -f "$2.npm" ] &&
         die "Pass file '$2' doesn't exist"
 
-    glob "$1" 'a*' && [ -f "$2.gpg" ] &&
+glob "$1" 'a*' && [ -f "$2.npm" ] &&
         die "Pass file '$2' already exists"
 
     glob "$2" '*/*' && glob "$2" '*../*' &&
@@ -208,7 +222,7 @@ main() {
 
     # Ensure that we leave the terminal in a usable
     # state on exit or Ctrl+C.
-    [ -t 1 ] && trap 'stty echo icanon' INT EXIT
+    trap 'stty echo icanon' INT EXIT
 
     case $1 in
         a*) pw_add  "$2" ;;
@@ -229,4 +243,4 @@ set +x
 # to avoid insecurities with word-splitting.
 set -f
 
-[ "$1" ] || usage && main "$@"
+main "$@"
