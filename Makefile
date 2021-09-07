@@ -1,3 +1,7 @@
+
+.PHONY: all clean install
+
+PREFIX = /usr/local
 LIBS = argon2/argon2.a
 SRC = chacha20.c npm.c util.c
 OBJ = $(SRC:%.c=%.o)
@@ -15,6 +19,9 @@ npmc: npmc.o
 
 .c.o:
 	$(CC) -c $< -o $@
+
+install:
+	install -Dm755 -t $(DESTDIR)$(PREFIX)/bin npm npm-core npmc npm-agent
 
 include argon2/Makefile
 
