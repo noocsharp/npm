@@ -89,7 +89,7 @@ main(int argc, char *argv[])
 
 	read_answer(sock);
 
-	puts(answer);
+	printf("%s", answer);
 
 closesock:
 	close(sock);
