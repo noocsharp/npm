@@ -1,3 +1,5 @@
+#define _BSD_SOURCE
+
 #include <errno.h>
 #include <string.h>
 #include <stdint.h>
@@ -19,6 +21,17 @@ char encryptor[PASSWORD_MAX_LEN+1];
 char key[KEY_LEN];
 char nonce[NONCE_LEN];
 char salt[SALT_LEN];
+
+void
+clear()
+{
+	explicit_bzero(data, sizeof(data));
+	explicit_bzero(encryptee, sizeof(encryptee));
+	explicit_bzero(encryptor, sizeof(encryptor));
+	explicit_bzero(key, sizeof(key));
+	explicit_bzero(nonce, sizeof(nonce));
+	explicit_bzero(salt, sizeof(salt));
+}
 
 ssize_t
 get_password(char *buf)
@@ -179,10 +192,12 @@ int main(int argc, char *argv[]) {
 		fclose(file);
 	}
 
+	clear();
 	return 0;
 
 fail:
 	if (file)
 		fclose(file);
+	clear();
 	return 1;
 }
