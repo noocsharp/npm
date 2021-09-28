@@ -40,12 +40,10 @@ xwrite(int fd, char *buf, size_t count)
 int
 read_answer(int fd)
 {
-	fprintf(stderr, "%s\n", __func__);
 	ssize_t ret;
 	char *ptr = answer;
 	while (answerlen <= PASSWORD_MAX_LEN && !memchr(answer, '\n', answerlen)) {
 		ret = read(fd, ptr, PASSWORD_MAX_LEN - answerlen);
-		fprintf(stderr, "ret = %d\n", ret);
 		if (ret == -1)
 			return ret;
 

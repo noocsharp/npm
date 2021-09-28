@@ -71,7 +71,6 @@ xwrite(int fd, char *buf, size_t count)
 int
 read_to_nl(int fd, char *buf)
 {
-	fprintf(stderr, "%s\n", __func__);
 	ssize_t ret;
 	size_t len = 0;
 	char *ptr = buf;
@@ -98,7 +97,6 @@ clear_encryptor()
 int
 get_password()
 {
-	fprintf(stderr, "%s\n", __func__);
 	int stdoutpipe[2], stdinpipe[2], status;
 
 	if (pipe(stdoutpipe) == -1) {
@@ -146,7 +144,6 @@ get_password()
 int
 run_core()
 {
-	fprintf(stderr, "%s\n", __func__);
 	int stdinpipe[2], status;
 	if (pipe(stdinpipe) == -1) {
 		fprintf(stderr, "failed to create stdin pipe: %s\n", strerror(errno));
@@ -164,7 +161,6 @@ run_core()
 		dup2(fds[CLIENT].fd, 1);
 
 		corecmd[2] = inbuf;
-		fprintf(stderr, "path is: %s\n", corecmd[2]);
 		if (execvp(corecmd[0], corecmd) == -1)
 			fprintf(stderr, "exec failed: %s\n", strerror(errno));
 
@@ -202,7 +198,6 @@ int
 agent()
 {
 	int status;
-	fprintf(stderr, "%s\n", __func__);
 
 	if (!cached) {
 		get_password();
