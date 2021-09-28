@@ -89,10 +89,11 @@ main(int argc, char *argv[])
 
 	read_answer(sock);
 
-	printf("%s", answer);
+	if (*answer)
+		printf("%s", answer);
 
 closesock:
 	close(sock);
 end:
-	return 0;
+	return !(*answer);
 }
