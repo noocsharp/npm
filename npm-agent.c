@@ -29,7 +29,7 @@
 #endif
 
 #ifndef TIMEOUT
-#define TIMEOUT 5000
+#define TIMEOUT 10000
 #endif
 
 #define LISTENER 0
