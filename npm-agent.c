@@ -201,6 +201,7 @@ set_timer()
 int
 agent()
 {
+	int status;
 	fprintf(stderr, "%s\n", __func__);
 
 	if (!cached) {
@@ -208,7 +209,10 @@ agent()
 		set_timer();
 	}
 
-	run_core();
+	// if the password is wrong, we don't cache it
+	if (status = run_core()) {
+		clear_encryptor();
+	}
 }
 
 bool running = true;
