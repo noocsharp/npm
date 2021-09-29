@@ -36,17 +36,21 @@ clear()
 ssize_t
 get_password(char *buf)
 {
-	fgets(buf, PASSWORD_MAX_LEN+1, stdin);
-	// XXX: is strlen problematic because it isn't constant time and acts on a secret?
-	size_t len = strlen(buf);
+	int ret;
+	char *ptr = buf;
+	while (ptr - buf < PASSWORD_MAX_LEN) {
+		ret = fgetc(stdin);
+		if (ret == EOF) {
+			return -1;
+		}
 
-	/* the last character of the line should be '\n', which should not be
-	 * included in the password */
-	if (len == PASSWORD_MAX_LEN && buf[PASSWORD_MAX_LEN-1] != '\n')
-		return -1;
+		if (ret == '\n')
+			return ptr - buf;
 
-	buf[len-1] = '\0';
-	return len - 1;
+		*(ptr++) = ret;
+	}
+
+	return -2;
 }
 
 void
@@ -116,9 +120,12 @@ int main(int argc, char *argv[]) {
 			goto fail;
 		}
 
-		len = get_password(encryptor);
-		if (len < 0) {
-			error("master password too long");
+		switch (len = get_password(encryptor)) {
+		case -1:
+			error("encountered EOF when reading master password");
+			goto fail;
+		case -2:
+			error("entered master password is too long");
 			goto fail;
 		}
 
@@ -134,9 +141,12 @@ int main(int argc, char *argv[]) {
 
 		memcpy(data, salt, SALT_LEN);
 
-		len = get_password(encryptee);
-		if (len < 0) {
-			error("password to encrypt is too long");
+		switch (len = get_password(encryptor)) {
+		case -1:
+			error("encountered EOF when reading password");
+			goto fail;
+		case -2:
+			error("entered password is too long");
 			goto fail;
 		}
 
@@ -174,7 +184,14 @@ int main(int argc, char *argv[]) {
 			goto fail;
 		}
 
-		len = get_password(encryptor);
+		switch (len = get_password(encryptor)) {
+		case -1:
+			error("encountered EOF when reading master password");
+			goto fail;
+		case -2:
+			error("entered master password is too long");
+			goto fail;
+		}
 
 		if (argon2id_hash_raw(T_COST, M_COST, PARALLELISM, encryptor, len, salt, SALT_LEN, key, KEY_LEN) < 0) {
 			error("key derivation failed");
