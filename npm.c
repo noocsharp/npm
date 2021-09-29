@@ -8,26 +8,27 @@
 #include <sys/mman.h>
 #include <sys/random.h>
 
-#include "chacha20.h"
 #include "common.h"
-#include "argon2/argon2.h"
+#include "monocypher.h"
 #include "util.h"
 
 char *argv0;
 
-char data[SALT_LEN + PASSWORD_MAX_LEN + 1];
-char encryptee[PASSWORD_MAX_LEN];
-char encryptor[PASSWORD_MAX_LEN+1];
+char plain[PASSWORD_MAX_LEN + 1];
+char cipher[PASSWORD_MAX_LEN + 1];
+char master[PASSWORD_MAX_LEN + 1];
 char key[KEY_LEN];
 char nonce[NONCE_LEN];
 char salt[SALT_LEN];
+uint8_t mac[MAC_LEN];
+char *work;
 
 void
 clear()
 {
-	explicit_bzero(data, sizeof(data));
-	explicit_bzero(encryptee, sizeof(encryptee));
-	explicit_bzero(encryptor, sizeof(encryptor));
+	explicit_bzero(plain, sizeof(plain));
+	explicit_bzero(cipher, sizeof(cipher));
+	explicit_bzero(master, sizeof(master));
 	explicit_bzero(key, sizeof(key));
 	explicit_bzero(nonce, sizeof(nonce));
 	explicit_bzero(salt, sizeof(salt));
@@ -90,15 +91,15 @@ int main(int argc, char *argv[]) {
 	}
 
 	/* we want to prevent secret data from being swapped to disk */
-	if (mlock(data, sizeof(data)) < 0) {
+	if (mlock(plain, sizeof(plain)) < 0) {
 		fprintf(stderr, "mlock failed: %s", strerror(errno));
 	}
 
-	if (mlock(encryptor, sizeof(encryptor)) < 0) {
+	if (mlock(cipher, sizeof(cipher)) < 0) {
 		fprintf(stderr, "mlock failed: %s", strerror(errno));
 	}
 
-	if (mlock(encryptee, sizeof(encryptee)) < 0) {
+	if (mlock(master, sizeof(master)) < 0) {
 		fprintf(stderr, "mlock failed: %s", strerror(errno));
 	}
 
@@ -120,7 +121,7 @@ int main(int argc, char *argv[]) {
 			goto fail;
 		}
 
-		switch (len = get_password(encryptor)) {
+		switch (len = get_password(master)) {
 		case -1:
 			error("encountered EOF when reading master password");
 			goto fail;
@@ -129,19 +130,20 @@ int main(int argc, char *argv[]) {
 			goto fail;
 		}
 
-		if (argon2id_hash_raw(T_COST, M_COST, PARALLELISM, encryptor, len, salt, SALT_LEN, key, KEY_LEN) < 0) {
-			error("key derivation failed");
+		work = malloc(M_COST * 1024);
+		if (!work) {
+			error("failed to allocate work buffer for argon2");
 			goto fail;
 		}
+
+		crypto_argon2i(key, KEY_LEN, work, M_COST, T_COST, master, len, salt, SALT_LEN);
 
 		if (getrandom(nonce, NONCE_LEN, 0) < NONCE_LEN) {
 			error("failed to generate nonce");
 			goto fail;
 		}
 
-		memcpy(data, salt, SALT_LEN);
-
-		switch (len = get_password(encryptor)) {
+		switch (len = get_password(plain)) {
 		case -1:
 			error("encountered EOF when reading password");
 			goto fail;
@@ -150,15 +152,12 @@ int main(int argc, char *argv[]) {
 			goto fail;
 		}
 
-		memset(data, 0, SALT_LEN + PASSWORD_MAX_LEN);
-		memcpy(data, salt, SALT_LEN);
-		memcpy(data + SALT_LEN, encryptee, PASSWORD_MAX_LEN);
-
-		br_chacha20_ct_run(key, nonce, 0, data, SALT_LEN + PASSWORD_MAX_LEN);
+		crypto_lock(mac, cipher, key, nonce, plain, PASSWORD_MAX_LEN);
 
 		fwrite(nonce, sizeof(char), NONCE_LEN, stdout);
 		fwrite(salt, sizeof(char), SALT_LEN, stdout);
-		fwrite(data, sizeof(char), SALT_LEN + PASSWORD_MAX_LEN, stdout);
+		fwrite(mac, sizeof(char), MAC_LEN, stdout);
+		fwrite(cipher, sizeof(char), PASSWORD_MAX_LEN, stdout);
 	} else if (strcmp(argv[1], "-d") == 0) {
 		file = fopen(argv[2], "r");
 		if (file == NULL) {
@@ -178,13 +177,19 @@ int main(int argc, char *argv[]) {
 			goto fail;
 		}
 
-		len = fread(data, sizeof(char), SALT_LEN + PASSWORD_MAX_LEN, file);
-		if (len < SALT_LEN + PASSWORD_MAX_LEN) {
+		len = fread(mac, sizeof(char), MAC_LEN, file);
+		if (len < MAC_LEN) {
+			error("failed to read MAC");
+			goto fail;
+		}
+
+		len = fread(cipher, sizeof(char), PASSWORD_MAX_LEN, file);
+		if (len < PASSWORD_MAX_LEN) {
 			error("failed to read encrypted data");
 			goto fail;
 		}
 
-		switch (len = get_password(encryptor)) {
+		switch (len = get_password(master)) {
 		case -1:
 			error("encountered EOF when reading master password");
 			goto fail;
@@ -193,19 +198,20 @@ int main(int argc, char *argv[]) {
 			goto fail;
 		}
 
-		if (argon2id_hash_raw(T_COST, M_COST, PARALLELISM, encryptor, len, salt, SALT_LEN, key, KEY_LEN) < 0) {
-			error("key derivation failed");
+		work = malloc(M_COST * 1024);
+		if (!work) {
+			error("failed to allocate argon2 work buffer");
 			goto fail;
 		}
 
-		br_chacha20_ct_run(key, nonce, 0, data, SALT_LEN + PASSWORD_MAX_LEN);
+		crypto_argon2i(key, KEY_LEN, work, M_COST, T_COST, master, len, salt, SALT_LEN);
 
-		if (memcmp(data, salt, SALT_LEN) != 0) {
+		if (crypto_unlock(plain, key, nonce, mac, cipher, PASSWORD_MAX_LEN) != 0) {
 			error("incorrect master password");
 			goto fail;
 		}
 
-		puts(data + SALT_LEN);
+		puts(plain);
 		fclose(file);
 	}
 

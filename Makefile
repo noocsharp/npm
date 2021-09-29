@@ -2,17 +2,17 @@
 .PHONY: all clean install
 
 PREFIX = /usr/local
-LIBS = argon2/argon2.a
-SRC = chacha20.c npm.c util.c
+SRC = npm.c npm-agent.c npmc.c util.c monocypher.c
 OBJ = $(SRC:%.c=%.o)
+EXE = npm-agent npm-core npmc
 NPM_CORE = "npm-core"
 
 CFLAGS = '-DNPM_CORE=$(NPM_CORE)'
 
 all: npm-core npm-agent npmc
 
-npm-core: $(LIBS) chacha20.o npm.o util.o
-	$(CC) -static chacha20.o npm.o util.o $(LIBS) -o $@
+npm-core: $(LIBS) npm.o util.o monocypher.o
+	$(CC) -static npm.o util.o monocypher.o -o $@
 
 npm-agent: npm-agent.o
 	$(CC) -static npm-agent.o -o $@
@@ -26,7 +26,5 @@ npmc: npmc.o
 install:
 	install -Dm755 -t $(DESTDIR)$(PREFIX)/bin npm npm-core npmc npm-agent
 
-include argon2/Makefile
-
-clean: argon2-clean
+clean:
 	rm -f $(OBJ) $(EXE)
