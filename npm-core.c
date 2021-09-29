@@ -18,9 +18,11 @@ char plain[PASSWORD_MAX_LEN + 1];
 char cipher[PASSWORD_MAX_LEN + 1];
 char master[PASSWORD_MAX_LEN + 1];
 char key[KEY_LEN];
-char nonce[NONCE_LEN];
-char salt[SALT_LEN];
 uint8_t mac[MAC_LEN];
+uint8_t data[SALT_LEN + NONCE_LEN];
+uint8_t *salt = data;
+uint8_t *nonce = data + SALT_LEN;
+
 char *work;
 
 void
@@ -31,7 +33,7 @@ clear()
 	explicit_bzero(master, sizeof(master));
 	explicit_bzero(key, sizeof(key));
 	explicit_bzero(nonce, sizeof(nonce));
-	explicit_bzero(salt, sizeof(salt));
+	explicit_bzero(data, sizeof(data));
 }
 
 ssize_t
@@ -107,11 +109,7 @@ int main(int argc, char *argv[]) {
 		fprintf(stderr, "mlock failed: %s", strerror(errno));
 	}
 
-	if (mlock(nonce, sizeof(nonce)) < 0) {
-		fprintf(stderr, "mlock failed: %s", strerror(errno));
-	}
-
-	if (mlock(salt, sizeof(salt)) < 0) {
+	if (mlock(data, sizeof(data)) < 0) {
 		fprintf(stderr, "mlock failed: %s", strerror(errno));
 	}
 
@@ -152,10 +150,10 @@ int main(int argc, char *argv[]) {
 			goto fail;
 		}
 
-		crypto_lock(mac, cipher, key, nonce, plain, PASSWORD_MAX_LEN);
+		crypto_lock_aead(mac, cipher, key, nonce, data, sizeof(data), plain, PASSWORD_MAX_LEN);
 
-		fwrite(nonce, sizeof(char), NONCE_LEN, stdout);
 		fwrite(salt, sizeof(char), SALT_LEN, stdout);
+		fwrite(nonce, sizeof(char), NONCE_LEN, stdout);
 		fwrite(mac, sizeof(char), MAC_LEN, stdout);
 		fwrite(cipher, sizeof(char), PASSWORD_MAX_LEN, stdout);
 	} else if (strcmp(argv[1], "-d") == 0) {
@@ -165,15 +163,15 @@ int main(int argc, char *argv[]) {
 			goto fail;
 		}
 			
-		len = fread(nonce, sizeof(char), NONCE_LEN, file);
-		if (len < NONCE_LEN) {
-			error("failed to read nonce");
-			goto fail;
-		}
-
 		len = fread(salt, sizeof(char), SALT_LEN, file);
 		if (len < SALT_LEN) {
 			error("failed to read salt");
+			goto fail;
+		}
+
+		len = fread(nonce, sizeof(char), NONCE_LEN, file);
+		if (len < NONCE_LEN) {
+			error("failed to read nonce");
 			goto fail;
 		}
 
@@ -206,7 +204,7 @@ int main(int argc, char *argv[]) {
 
 		crypto_argon2i(key, KEY_LEN, work, M_COST, T_COST, master, len, salt, SALT_LEN);
 
-		if (crypto_unlock(plain, key, nonce, mac, cipher, PASSWORD_MAX_LEN) != 0) {
+		if (crypto_unlock_aead(plain, key, nonce, mac, data, sizeof(data), cipher, PASSWORD_MAX_LEN) != 0) {
 			error("incorrect master password");
 			goto fail;
 		}
