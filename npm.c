@@ -56,7 +56,7 @@ get_password(char *buf)
 void
 error(const char *s)
 {
-	fprintf(stderr, "%s: %s", argv0, s);
+	fprintf(stderr, "%s: %s\n", argv0, s);
 }
 
 void
