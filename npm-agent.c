@@ -24,10 +24,6 @@
 
 #include "common.h"
 
-#ifndef SOCKPATH
-#define SOCKPATH "/tmp/npm-agent"
-#endif
-
 #ifndef TIMEOUT
 #define TIMEOUT 10000
 #endif

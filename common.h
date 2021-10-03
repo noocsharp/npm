@@ -12,3 +12,7 @@
 #if SALT_LEN == 0 || SALT_LEN > SIZE_MAX - 4
 #error Invalid salt size
 #endif
+
+#ifndef SOCKPATH
+#define SOCKPATH "/tmp/npm-agent"
+#endif
