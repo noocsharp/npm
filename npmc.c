@@ -11,10 +11,6 @@
 
 #include "common.h"
 
-#ifndef SOCKPATH
-#define SOCKPATH "/tmp/npm-agent"
-#endif
-
 char answer[PASSWORD_MAX_LEN + 1];
 int answerlen = 0;
 
