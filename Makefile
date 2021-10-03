@@ -4,12 +4,15 @@
 PREFIX = /usr/local
 SRC = npm-core.c npm-agent.c npmc.c util.c monocypher.c
 OBJ = $(SRC:%.c=%.o)
-EXE = npm-agent npm-core npmc
+EXE = npm-agent npm-core npmc npm
 NPM_CORE = "npm-core"
 
 CFLAGS = '-DNPM_CORE=$(NPM_CORE)'
 
-all: npm-core npm-agent npmc
+all: $(EXE)
+
+npm: npm.in
+	sed "s,@PREFIX@,$(PREFIX)," $< > $@
 
 npm-core: $(LIBS) npm-core.o util.o monocypher.o
 	$(CC) -static npm-core.o util.o monocypher.o -o $@

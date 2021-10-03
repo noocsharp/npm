@@ -2,8 +2,8 @@
 #
 # pash - simple password manager.
 
-core="/home/nihal/projects/npm/npm-core"
-npmc="/home/nihal/projects/npm/npmc"
+core=@PREFIX@/bin/npm-core
+npmc=@PREFIX@/bin/npmc
 
 pw_add() {
     name=$1
