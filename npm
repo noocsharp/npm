@@ -22,8 +22,8 @@
 # IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM, OUT OF OR IN
 # CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
 
-core="/home/nihal/projects/npm/npm-core"
-npmc="/home/nihal/projects/npm/npmc"
+core=npm-core
+npmc=npmc
 
 master_check() {
 	result=$("$core" -d .npmcheck <<-EOF
