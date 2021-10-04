@@ -39,8 +39,8 @@ char *const getpasscmd[] = { "bemenu", "-x", "-p", "Password:", NULL };
 bool cached = false;
 
 char inbuf[PATH_MAX];
-char encryptor[PASSWORD_MAX_LEN+1];
-size_t encryptorlen;
+char master[PASSWORD_MAX_LEN + 1];
+ssize_t masterlen;
 char *inptr = inbuf;
 size_t inlen;
 struct pollfd fds[3];
@@ -81,11 +81,11 @@ read_to_nl(int fd, char *buf)
 }
 
 void
-clear_encryptor()
+clear_master()
 {
 	cached = false;
-	explicit_bzero(encryptor, sizeof(encryptor));
-	encryptorlen = 0;
+	explicit_bzero(master, sizeof(master));
+	masterlen = 0;
 }
 
 int
@@ -121,7 +121,7 @@ get_password()
 		close(stdinpipe[0]);
 		close(stdinpipe[1]);
 
-		if ((encryptorlen = read_to_nl(stdoutpipe[0], encryptor)) == -1) {
+		if ((masterlen = read_to_nl(stdoutpipe[0], master)) == -1) {
 			fprintf(stderr, "failed to read password from pipe\n");
 			return -1;
 		}
@@ -162,7 +162,7 @@ run_core()
 	default:
 		close(stdinpipe[0]);
 
-		if (xwrite(stdinpipe[1], encryptor, encryptorlen) == -1) {
+		if (xwrite(stdinpipe[1], master, masterlen) == -1) {
 			fprintf(stderr, "failed to write password to pipe\n");
 			return -1;
 		}
@@ -280,7 +280,7 @@ main()
 		if (fds[TIMER].revents & POLLIN) {
 			uint64_t val;
 			read(fds[TIMER].fd, &val, sizeof(val));
-			clear_encryptor();
+			clear_master();
 		}
 
 		// incoming data
