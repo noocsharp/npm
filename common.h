@@ -7,8 +7,7 @@
 
 // Argon2 parameters
 #define T_COST 250
-#define M_COST 2*1024 // 2 mibibytes
-#define PARALLELISM 1
+#define M_COST 1024 // 1 mibibyte
 
 #if SALT_LEN == 0 || SALT_LEN > SIZE_MAX - 4
 #error Invalid salt size
