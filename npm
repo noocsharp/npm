@@ -25,6 +25,14 @@
 core="/home/nihal/projects/npm/npm-core"
 npmc="/home/nihal/projects/npm/npmc"
 
+master_check() {
+	result=$("$core" -d .npmcheck <<-EOF
+	$1
+	EOF
+	)
+	[ "$result" = "password" ]
+}
+
 pw_add() {
     name=$1
 
@@ -38,13 +46,13 @@ pw_add() {
         #
         # Regarding usage of '/dev/urandom' instead of '/dev/random'.
         # See: https://www.2uo.de/myths-about-urandom
-        pass=$(LC_ALL=C tr -dc "${PASH_PATTERN:-_A-Z-a-z-0-9}" < /dev/urandom |
-            dd ibs=1 obs=1 count="${PASH_LENGTH:-50}" 2>/dev/null)
+        pass=$(LC_ALL=C tr -dc "${NPM_PATTERN:-_A-Z-a-z-0-9}" < /dev/urandom |
+            dd ibs=1 obs=1 count="${NPM_LENGTH:-50}" 2>/dev/null)
 
     else
         # 'sread()' is a simple wrapper function around 'read'
         # to prevent user input from being printed to the terminal.
-        sread pass  "Enter password"
+        sread pass "Enter password (again)"
         sread pass2 "Enter password (again)"
 
         # Disable this check as we dynamically populate the two
@@ -53,30 +61,23 @@ pw_add() {
         [ "$pass" = "$pass2" ] || die "Passwords do not match"
     fi
 
+    sread master  "Enter master password"
+    master_check "$master" || die "Failed to read master password"
+
     [ "$pass" ] || die "Failed to generate a password"
 
-    # Mimic the use of an array for storing arguments by... using
-    # the function's argument list. This is very apt isn't it?
-    if [ "$PASH_KEYID" ]; then
-        set -- --trust-model always -aer "$PASH_KEYID"
-    else
-        set -- -c
-    fi
-
-    # Use 'gpg' to store the password in an encrypted file.
+    # Use 'npm-core' to store the password in an encrypted file.
     # A heredoc is used here instead of a 'printf' to avoid
     # leaking the password through the '/proc' filesystem.
     #
     # Heredocs are sometimes implemented via temporary files,
     # however this is typically done using 'mkstemp()' which
     # is more secure than '/proc'.
-    printf "got here: %s\n" "$name"
     "$core" -e > "$name.npm" <<-EOF && \
         printf '%s\n' "Saved '$name' to the store."
-		$(echo "" | bemenu -x -p "Passphrase:")
+		$master
 		$pass
 	EOF
-    printf "got here2\n"
 }
 
 pw_del() {
@@ -87,7 +88,7 @@ pw_del() {
 }
 
 pw_show() {
-    "$npmc" "$1.npm"
+    [ "$("$npmc" .npmcheck)" = "password" ] && "$npmc" "$1.npm"
 }
 
 pw_copy() {
@@ -120,6 +121,17 @@ pw_tree() {
         die "'tree' command not found"
 
     tree --noreport | sed 's/\.npm$//'
+}
+
+pw_init() {
+	# TODO: check if .npmcheck already exists
+    sread master "Enter master password"
+    sread master2 "Confirm master password"
+    [ "$master" = "$master2" ] || die "Passwords do not match"
+    $core -e > .npmcheck <<-EOF
+		$master
+		password
+	EOF
 }
 
 yn() {
@@ -175,7 +187,7 @@ die() {
 }
 
 usage() { printf %s "\
-pash 2.3.0 - simple password manager.
+npm - simple password manager.
 
 => [a]dd  [name] - Create a new password entry.
 => [c]opy [name] - Copy entry to the clipboard.
@@ -187,7 +199,7 @@ pash 2.3.0 - simple password manager.
 Using a key pair:  export PASH_KEYID=XXXXXXXX
 Password length:   export PASH_LENGTH=50
 Password pattern:  export PASH_PATTERN=_A-Z-a-z-0-9
-Store location:    export PASH_DIR=~/.local/share/pash
+Store location:    export PASH_DIR=~/.local/share/npm
 Clipboard tool:    export PASH_CLIP='xclip -sel c'
 Clipboard timeout: export PASH_TIMEOUT=15 ('off' to disable)
 "
@@ -249,6 +261,7 @@ glob "$1" 'a*' && [ -f "$2.npm" ] &&
         c*) pw_copy "$2" ;;
         d*) pw_del  "$2" ;;
         s*) pw_show "$2" ;;
+        i*) pw_init ;;
         l*) pw_list ;;
         t*) pw_tree ;;
         *)  usage
