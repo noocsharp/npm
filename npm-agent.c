@@ -240,82 +240,82 @@ main(int argc, char *argv[])
 		goto error_socket;
 	}
 
-    if (bind(sock, (struct sockaddr *) &sockaddr, sizeof(sockaddr)) == -1) {
-        fprintf(stderr, "failed to bind to socket: %s\n", strerror(errno));
-        goto error;
-    }
+	if (bind(sock, (struct sockaddr *) &sockaddr, sizeof(sockaddr)) == -1) {
+		fprintf(stderr, "failed to bind to socket: %s\n", strerror(errno));
+		goto error;
+	}
 
-    if (listen(sock, 50) == -1) {
-        fprintf(stderr, "failed to set socket to listening: %s\n", strerror(errno));
-        goto error;
-    }
+	if (listen(sock, 50) == -1) {
+		fprintf(stderr, "failed to set socket to listening: %s\n", strerror(errno));
+		goto error;
+	}
 
-    int timer = timerfd_create(CLOCK_MONOTONIC, 0);
-    if (!timer) {
-    	fprintf(stderr, "failed to create timerfd: %s\n", strerror(errno));
-    	goto error;
-    }
+	int timer = timerfd_create(CLOCK_MONOTONIC, 0);
+	if (!timer) {
+		fprintf(stderr, "failed to create timerfd: %s\n", strerror(errno));
+		goto error;
+	}
 
-    fds[LISTENER].fd = sock;
-    fds[LISTENER].events = POLLIN;
-    fds[TIMER].fd = timer;
-    fds[TIMER].events = POLLIN;
-    fds[CLIENT].fd = -1;
+	fds[LISTENER].fd = sock;
+	fds[LISTENER].events = POLLIN;
+	fds[TIMER].fd = timer;
+	fds[TIMER].events = POLLIN;
+	fds[CLIENT].fd = -1;
 
-    while (running) {
-    	if (poll(fds, sizeof(fds) / sizeof(fds[0]), -1) == -1) {
-    		fprintf(stderr, "poll failed: %s", strerror(errno));
-    		goto error;
-    	}
+	while (running) {
+		if (poll(fds, sizeof(fds) / sizeof(fds[0]), -1) == -1) {
+			fprintf(stderr, "poll failed: %s", strerror(errno));
+			goto error;
+		}
 
 		// new connection
-    	if (fds[LISTENER].revents & POLLIN) {
-    		if (fds[CLIENT].fd < 0) {
-    			fds[CLIENT].fd = accept(fds[LISTENER].fd, NULL, NULL);
-    			if (fds[CLIENT].fd == -1)
-		    		fprintf(stderr, "accept failed: %s", strerror(errno));
+		if (fds[LISTENER].revents & POLLIN) {
+			if (fds[CLIENT].fd < 0) {
+				fds[CLIENT].fd = accept(fds[LISTENER].fd, NULL, NULL);
+				if (fds[CLIENT].fd == -1)
+					fprintf(stderr, "accept failed: %s", strerror(errno));
 
 				inptr = inbuf;
 				inlen = 0;
 				memset(inbuf, 0, sizeof(inbuf));
-		    	fds[CLIENT].events = POLLIN;
-    		}
-    	}
+				fds[CLIENT].events = POLLIN;
+			}
+		}
 
-    	// timer expired
-    	if (fds[TIMER].revents & POLLIN) {
-    		uint64_t val;
-    		read(fds[TIMER].fd, &val, sizeof(val));
+		// timer expired
+		if (fds[TIMER].revents & POLLIN) {
+			uint64_t val;
+			read(fds[TIMER].fd, &val, sizeof(val));
 			clear_encryptor();
-    	}
+		}
 
 		// incoming data
-    	if (fds[CLIENT].revents & POLLIN) {
-    		ret = read(fds[CLIENT].fd, inptr, sizeof(inbuf) - inlen);
-    		if (ret == -1) {
-    			fprintf(stderr, "failed to read from client: %s\n", strerror(errno));
-    			goto error;
-    		}
+		if (fds[CLIENT].revents & POLLIN) {
+			ret = read(fds[CLIENT].fd, inptr, sizeof(inbuf) - inlen);
+			if (ret == -1) {
+				fprintf(stderr, "failed to read from client: %s\n", strerror(errno));
+				goto error;
+			}
 
-    		inlen += ret;
-    		inptr += ret;
-    		// if there is a null, the path is complete
-    		if (memchr(inbuf, 0, inlen)) {
-    			fds[CLIENT].revents &= ~POLLIN;
+			inlen += ret;
+			inptr += ret;
+			// if there is a null, the path is complete
+			if (memchr(inbuf, 0, inlen)) {
+				fds[CLIENT].revents &= ~POLLIN;
 
-    			agent();
-    			close(fds[CLIENT].fd);
-    			fds[CLIENT].fd = -1;
-    			continue;
-    		}
-    		// if the buffer is full without a null, the client is misbehaving,
-    		// so close the connection and clear inbuf
-    		if (inlen == sizeof(inbuf)) {
-    			close(fds[CLIENT].fd);
-    			fds[CLIENT].fd = -1;
-    		}
-    	}
-    }
+				agent();
+				close(fds[CLIENT].fd);
+				fds[CLIENT].fd = -1;
+				continue;
+			}
+			// if the buffer is full without a null, the client is misbehaving,
+			// so close the connection and clear inbuf
+			if (inlen == sizeof(inbuf)) {
+				close(fds[CLIENT].fd);
+				fds[CLIENT].fd = -1;
+			}
+		}
+	}
 
 error:
 	close(sock);
