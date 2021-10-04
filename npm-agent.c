@@ -71,7 +71,7 @@ xwrite(int fd, char *buf, size_t count)
 int
 read_to_nl(int fd, char *buf)
 {
-	ssize_t ret;
+	ssize_t ret = -1;
 	size_t len = 0;
 	char *ptr = buf;
 	while (ret && len <= PASSWORD_MAX_LEN && !memchr(buf, '\n', len)) {
