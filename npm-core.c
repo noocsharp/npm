@@ -14,10 +14,10 @@
 
 char *argv0;
 
-char plain[PASSWORD_MAX_LEN + 1];
-char cipher[PASSWORD_MAX_LEN + 1];
-char master[PASSWORD_MAX_LEN + 1];
-char key[KEY_LEN];
+uint8_t plain[PASSWORD_MAX_LEN + 1];
+uint8_t cipher[PASSWORD_MAX_LEN + 1];
+uint8_t master[PASSWORD_MAX_LEN + 1];
+uint8_t key[KEY_LEN];
 uint8_t mac[MAC_LEN];
 uint8_t data[SALT_LEN + NONCE_LEN];
 uint8_t *salt = data;
@@ -37,10 +37,10 @@ clear()
 }
 
 ssize_t
-get_password(char *buf)
+get_password(uint8_t *buf)
 {
 	int ret;
-	char *ptr = buf;
+	uint8_t *ptr = buf;
 	while (ptr - buf < PASSWORD_MAX_LEN) {
 		ret = fgetc(stdin);
 		if (ret == EOF) {
@@ -70,7 +70,6 @@ usage()
 }
 
 int main(int argc, char *argv[]) {
-	char *c;
 	size_t len;
 	FILE *file = NULL;
 
@@ -209,7 +208,7 @@ int main(int argc, char *argv[]) {
 			goto fail;
 		}
 
-		puts(plain);
+		puts((char *)plain);
 		fclose(file);
 	}
 

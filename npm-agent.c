@@ -45,8 +45,6 @@ char *inptr = inbuf;
 size_t inlen;
 struct pollfd fds[3];
 
-int cstdin, cstdout; // stdin, out from the core
-
 int
 xwrite(int fd, char *buf, size_t count)
 {
@@ -190,7 +188,7 @@ set_timer()
 	}
 }
 
-int
+void
 agent()
 {
 	int status;
@@ -201,21 +199,21 @@ agent()
 	}
 
 	// if the password is wrong, we don't cache it
-	if (status = run_core()) {
-		clear_encryptor();
+	if ((status = run_core()) != 0) {
+		clear_master();
 	}
 }
 
 bool running = true;
 
 void
-handler(int sig)
+handler()
 {
 	running = false;
 }
 
 int
-main(int argc, char *argv[])
+main()
 {
 	struct sockaddr_un sockaddr = {
 		.sun_family = AF_UNIX,
