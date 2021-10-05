@@ -124,7 +124,8 @@ pw_tree() {
 }
 
 pw_init() {
-	# TODO: check if .npmcheck already exists
+	[ -e .npmcheck ] && die ".npmcheck already exists"
+
     sread master "Enter master password"
     sread master2 "Confirm master password"
     [ "$master" = "$master2" ] || die "Passwords do not match"
