@@ -10,7 +10,6 @@
 
 #include "common.h"
 #include "monocypher.h"
-#include "util.h"
 
 char *argv0;
 
