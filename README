@@ -1,0 +1,48 @@
+# Nihal's Password Manager
+
+## Rationale
+
+I normally use `pash`, as my password manager, which uses gpg2 to do all of the
+cryptography. In my setup (and likely the setups of most people who use pash or
+pass), the private key is on the same drive that holds the encrypted passwords.
+So if an attacker gets access to the encrypted passwords, they likely also have
+access to the encrypted private key for encrypting those passwords. The private
+key is probably encrypted using only a master password, so if an attacker gains
+access to this master password, all encrypted passwords are compromised.
+
+If an attacker gains access to the passwords without also gaining access to the
+encrypted private key, public key encryption is advantageous only if the master
+password is sufficiently weak.
+
+So given that the password database is practically only as secure as the master
+password, gpg2 provides little value for this use case.
+
+To replace it, I wrote a program that only performs the cryptographic functions
+necessary for this use case: encrypting and decrypting using a master password.
+It uses Monocypher 3.1.2 for cryptography, which uses XChaCha20 for encryption,
+and Argon2 for key derivation.
+
+## Programs
+
+### npm-core
+
+`npm-core` produces files containing encrypted passwords, and decrypts them. It
+provides the core encryption functionality of `npm` as the name implies.
+
+### npm-agent
+
+`npm-agent` implements password caching over a simple socket protocol. It reads
+a path to a file produced by `npm-core`, containing an encrypted password. Then
+using the master password (requesting it if necessary), it decrypts the content
+of the file and writes it back over the socket.
+
+### npmc
+
+npmc is just an interface for npm-agent usable in a shell. It takes a file path
+to a `npm-core` password file, talks to `npm-agent`, and prints the password it
+returns to stdout.
+
+### npm
+
+The password manager is just a modified version of `pash` where gpg is replaced
+by `npm-core` and `npmc`.
