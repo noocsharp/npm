@@ -49,7 +49,7 @@ pw_add() {
     else
         # 'sread()' is a simple wrapper function around 'read'
         # to prevent user input from being printed to the terminal.
-        sread pass "Enter password (again)"
+        sread pass "Enter password"
         sread pass2 "Enter password (again)"
 
         # Disable this check as we dynamically populate the two
