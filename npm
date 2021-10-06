@@ -22,9 +22,6 @@
 # IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM, OUT OF OR IN
 # CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
 
-core=npm-core
-npmc=npmc
-
 master_check() {
 	result=$("$core" -d .npmcheck <<-EOF
 	$1
@@ -95,21 +92,21 @@ pw_copy() {
     # Disable warning against word-splitting as it is safe
     # and intentional (globbing is disabled).
     # shellcheck disable=2086
-    : "${PASH_CLIP:=xclip -sel c}"
+    : "${NPM_CLIP:=xclip -sel c}"
 
     # Wait in the background for the password timeout and
     # clear the clipboard when the timer runs out.
     #
     # If the 'sleep' fails, kill the script. This is the
     # simplest method of aborting from a subshell.
-    [ "$PASH_TIMEOUT" != off ] && {
-        printf 'Clearing clipboard in "%s" seconds.\n' "${PASH_TIMEOUT:=15}"
+    [ "$NPM_TIMEOUT" != off ] && {
+        printf 'Clearing clipboard in "%s" seconds.\n' "${NPM_TIMEOUT:=15}"
 
-        sleep "$PASH_TIMEOUT" || kill 0
-        $PASH_CLIP </dev/null
+        sleep "$NPM_TIMEOUT" || kill 0
+        $NPM_CLIP </dev/null
     } &
 
-    pw_show "$1" | $PASH_CLIP
+    pw_show "$1" | $NPM_CLIP
 }
 
 pw_list() {
@@ -197,12 +194,12 @@ npm - simple password manager.
 => [s]how [name] - Show password for an entry.
 => [t]ree        - List all entries in a tree.
 
-Using a key pair:  export PASH_KEYID=XXXXXXXX
-Password length:   export PASH_LENGTH=50
-Password pattern:  export PASH_PATTERN=_A-Z-a-z-0-9
-Store location:    export PASH_DIR=~/.local/share/npm
-Clipboard tool:    export PASH_CLIP='xclip -sel c'
-Clipboard timeout: export PASH_TIMEOUT=15 ('off' to disable)
+Using a key pair:  export NPM_KEYID=XXXXXXXX
+Password length:   export NPM_LENGTH=50
+Password pattern:  export NPM_PATTERN=_A-Z-a-z-0-9
+Store location:    export NPM_DIR=~/.local/share/npm
+Clipboard tool:    export NPM_CLIP='xclip -sel c'
+Clipboard timeout: export NPM_TIMEOUT=15 ('off' to disable)
 "
 exit 1
 }
@@ -213,13 +210,11 @@ main() {
     [ "$1" = '-?' ] || [ -z "$1" ] &&
         usage
 
-    # Look for both 'gpg' and 'gpg2',
-    # preferring 'gpg2' if it is available.
-    command -v gpg  >/dev/null 2>&1 && gpg=gpg
-    command -v gpg2 >/dev/null 2>&1 && gpg=gpg2
+    command -v npm-core >/dev/null 2>&1 && core=npm-core
+    command -v npmc >/dev/null 2>&1 && npmc=npmc
 
-    [ "$gpg" ] ||
-        die "GPG not found"
+    [ "$core" ] || die "npm-core not found"
+    [ "$npmc" ] || die "npmc not found"
 
     mkdir -p "$NPM_DIR" ||
         die "Couldn't create password directory"
@@ -244,10 +239,6 @@ glob "$1" 'a*' && [ -f "$2.npm" ] &&
 
     glob "$2" '*/*' && { mkdir -p "${2%/*}" ||
         die "Couldn't create category '${2%/*}'"; }
-
-    # Set 'GPG_TTY' to the current 'TTY' if it
-    # is unset. Fixes a somewhat rare `gpg` issue.
-    export GPG_TTY=${GPG_TTY:-$(tty)}
 
     # Restrict permissions of any new files to
     # only the current user.
