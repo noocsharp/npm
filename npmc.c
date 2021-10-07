@@ -1,3 +1,5 @@
+#define _DEFAULT_SOURCE
+
 #include <limits.h>
 #include <stdint.h>
 #include <stdbool.h>

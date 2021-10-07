@@ -1,4 +1,4 @@
-#define _BSD_SOURCE
+#define _DEFAULT_SOURCE
 
 /* npm-agent uses a simple socket protocol to receive and respond to requests:
  * a client sends a null-terminated path over a socket, with a maximum length
