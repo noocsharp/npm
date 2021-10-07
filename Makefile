@@ -10,13 +10,13 @@ NPM_CORE = "npm-core"
 all: npm-core npm-agent npmc
 
 npm-core: $(LIBS) npm-core.o monocypher.o
-	$(CC) -static npm-core.o monocypher.o -o $@
+	$(CC) $(LDFLAGS) npm-core.o monocypher.o -o $@
 
 npm-agent: npm-agent.o
-	$(CC) -static npm-agent.o -o $@
+	$(CC) $(LDFLAGS) npm-agent.o -o $@
 
 npmc: npmc.o
-	$(CC) -static npmc.o -o $@
+	$(CC) $(LDFLAGS) npmc.o -o $@
 
 npm-agent.o: npm-agent.c
 	$(CC) '-DNPM_CORE=$(NPM_CORE)' $(CFLAGS) -c $< -o $@
