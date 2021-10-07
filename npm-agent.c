@@ -93,13 +93,11 @@ get_password()
 {
 	int stdoutpipe[2], stdinpipe[2], status;
 
-	if (pipe(stdoutpipe) == -1) {
-		fprintf(stderr, "failed to create stdout pipe: %s\n", strerror(errno));
-	}
+	if (pipe(stdoutpipe) == -1)
+		perror("failed to create stdout pipe");
 
-	if (pipe(stdinpipe) == -1) {
-		fprintf(stderr, "failed to create stdin pipe: %s\n", strerror(errno));
-	}
+	if (pipe(stdinpipe) == -1)
+		perror("failed to create stdin pipe");
 
 	pid_t pid = fork();
 	switch (pid) {
@@ -113,7 +111,7 @@ get_password()
 		dup2(stdinpipe[0], 0);
 		
 		if (execvp(getpasscmd[0], getpasscmd) == -1)
-			fprintf(stderr, "exec failed: %s\n", strerror(errno));
+			perror("exec failed");
 
 		break;
 	default:
@@ -139,14 +137,13 @@ int
 run_core()
 {
 	int stdinpipe[2], status;
-	if (pipe(stdinpipe) == -1) {
-		fprintf(stderr, "failed to create stdin pipe: %s\n", strerror(errno));
-	}
+	if (pipe(stdinpipe) == -1)
+		perror("failed to create stdin pipe");
 
 	pid_t pid = fork();
 	switch (pid) {
 	case -1:
-		fprintf(stderr, "fork failed\n");
+		perror("fork failed");
 		return -1;
 	case 0:
 		close(stdinpipe[1]);
@@ -156,7 +153,7 @@ run_core()
 
 		corecmd[2] = inbuf;
 		if (execvp(corecmd[0], corecmd) == -1)
-			fprintf(stderr, "exec failed: %s\n", strerror(errno));
+			perror("exec failed");
 
 		break;
 	default:
@@ -183,9 +180,8 @@ const struct itimerspec timerspec = {
 void
 set_timer()
 {
-	if (timerfd_settime(fds[TIMER].fd, 0, &timerspec, NULL) == -1) {
-		fprintf(stderr, "failed to set cache timeout: %s\n", strerror(errno));
-	}
+	if (timerfd_settime(fds[TIMER].fd, 0, &timerspec, NULL) == -1)
+		perror("failed to set cache timeout");
 }
 
 void
@@ -230,23 +226,23 @@ main()
 
 	int sock = socket(AF_UNIX, SOCK_STREAM, 0);
 	if (sock == -1) {
-		fprintf(stderr, "failed to create socket: %s\n", strerror(errno));
+		perror("failed to create socket");
 		goto error_socket;
 	}
 
 	if (bind(sock, (struct sockaddr *) &sockaddr, sizeof(sockaddr)) == -1) {
-		fprintf(stderr, "failed to bind to socket: %s\n", strerror(errno));
+		perror("failed to bind to socket");
 		goto error;
 	}
 
 	if (listen(sock, 50) == -1) {
-		fprintf(stderr, "failed to set socket to listening: %s\n", strerror(errno));
+		perror("failed to set socket to listening");
 		goto error;
 	}
 
 	int timer = timerfd_create(CLOCK_MONOTONIC, 0);
 	if (!timer) {
-		fprintf(stderr, "failed to create timerfd: %s\n", strerror(errno));
+		perror("failed to create timerfd");
 		goto error;
 	}
 
@@ -258,7 +254,7 @@ main()
 
 	while (running) {
 		if (poll(fds, sizeof(fds) / sizeof(fds[0]), -1) == -1) {
-			fprintf(stderr, "poll failed: %s", strerror(errno));
+			perror("poll failed");
 			goto error;
 		}
 
@@ -267,7 +263,7 @@ main()
 			if (fds[CLIENT].fd < 0) {
 				fds[CLIENT].fd = accept(fds[LISTENER].fd, NULL, NULL);
 				if (fds[CLIENT].fd == -1)
-					fprintf(stderr, "accept failed: %s", strerror(errno));
+					perror("accept failed");
 
 				inptr = inbuf;
 				inlen = 0;
@@ -287,7 +283,7 @@ main()
 		if (fds[CLIENT].revents & POLLIN) {
 			ret = read(fds[CLIENT].fd, inptr, sizeof(inbuf) - inlen);
 			if (ret == -1) {
-				fprintf(stderr, "failed to read from client: %s\n", strerror(errno));
+				perror("failed to read from client");
 				goto error;
 			}
 
