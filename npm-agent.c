@@ -141,14 +141,16 @@ int
 run_core()
 {
 	int stdinpipe[2], status;
-	if (pipe(stdinpipe) == -1)
+	if (pipe(stdinpipe) == -1) {
 		perror("failed to create stdin pipe");
+		return 1;
+	}
 
 	pid_t pid = fork();
 	switch (pid) {
 	case -1:
 		perror("fork failed");
-		return -1;
+		return 1;
 	case 0:
 		close(stdinpipe[1]);
 
@@ -156,16 +158,18 @@ run_core()
 		dup2(fds[CLIENT].fd, 1);
 
 		corecmd[2] = inbuf;
-		if (execvp(corecmd[0], corecmd) == -1)
-			perror("exec failed");
+		if (execvp(corecmd[0], corecmd) == -1) {
+			perror("failed to run core");
+			exit(1);
+		}
 
 		break;
 	default:
 		close(stdinpipe[0]);
 
 		if (xwrite(stdinpipe[1], master, masterlen) == -1) {
-			fprintf(stderr, "failed to write password to pipe\n");
-			return -1;
+			perror("failed to write master password to pipe");
+			return 1;
 		}
 
 		close(stdinpipe[1]);
@@ -182,13 +186,6 @@ const struct itimerspec timerspec = {
 };
 
 void
-set_timer()
-{
-	if (timerfd_settime(fds[TIMER].fd, 0, &timerspec, NULL) == -1)
-		perror("failed to set cache timeout");
-}
-
-void
 agent()
 {
 	int status;
@@ -197,13 +194,16 @@ agent()
 		if (get_master() != 0)
 			return;
 
-		set_timer();
+		if (timerfd_settime(fds[TIMER].fd, 0, &timerspec, NULL) == -1) {
+			perror("failed to set cache timeout");
+			clear_master();
+			return;
+		}
 	}
 
 	// if the password is wrong, we don't cache it
-	if ((status = run_core()) != 0) {
+	if ((status = run_core()) != 0)
 		clear_master();
-	}
 }
 
 bool running = true;
