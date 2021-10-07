@@ -7,8 +7,6 @@ OBJ = $(SRC:%.c=%.o)
 EXE = npm-agent npm-core npmc
 NPM_CORE = "npm-core"
 
-CFLAGS = '-DNPM_CORE=$(NPM_CORE)'
-
 all: npm-core npm-agent npmc
 
 npm-core: $(LIBS) npm-core.o monocypher.o
@@ -20,8 +18,8 @@ npm-agent: npm-agent.o
 npmc: npmc.o
 	$(CC) -static npmc.o -o $@
 
-.c.o:
-	$(CC) $(CFLAGS) -c $< -o $@
+npm-agent.o: npm-agent.c
+	$(CC) '-DNPM_CORE=$(NPM_CORE)' $(CFLAGS) -c $< -o $@
 
 install:
 	install -Dm755 -t $(DESTDIR)$(PREFIX)/bin npm npm-core npmc npm-agent
