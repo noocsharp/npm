@@ -89,31 +89,35 @@ clear_master()
 }
 
 int
-get_password()
+get_master()
 {
-	int stdoutpipe[2], stdinpipe[2], status;
+	int stdoutpipe[2], stdinpipe[2], status = 1;
 
-	if (pipe(stdoutpipe) == -1)
+	if (pipe(stdoutpipe) == -1) {
 		perror("failed to create stdout pipe");
+		return status;
+	}
 
-	if (pipe(stdinpipe) == -1)
+	if (pipe(stdinpipe) == -1) {
 		perror("failed to create stdin pipe");
+		return status;
+	}
 
 	pid_t pid = fork();
 	switch (pid) {
 	case -1:
 		fprintf(stderr, "fork failed\n");
-		return -1;
+		return status;
 	case 0:
 		close(stdoutpipe[0]);
 		dup2(stdoutpipe[1], 1);
 		close(stdinpipe[1]);
 		dup2(stdinpipe[0], 0);
 		
-		if (execvp(getpasscmd[0], getpasscmd) == -1)
-			perror("exec failed");
-
-		break;
+		if (execvp(getpasscmd[0], getpasscmd) == -1) {
+			perror("failed to start password retrieval program");
+			exit(1);
+		}
 	default:
 		close(stdoutpipe[1]);
 		close(stdinpipe[0]);
@@ -190,7 +194,9 @@ agent()
 	int status;
 
 	if (!cached) {
-		get_password();
+		if (get_master() != 0)
+			return;
+
 		set_timer();
 	}
 
