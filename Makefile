@@ -1,4 +1,4 @@
-
+.POSIX:
 .PHONY: all clean install
 
 PREFIX = /usr/local
