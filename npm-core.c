@@ -6,7 +6,7 @@
 #include <stdio.h>
 #include <stdlib.h>
 #include <sys/mman.h>
-#include <sys/random.h>
+#include <unistd.h>
 
 #include "common.h"
 #include "monocypher.h"
@@ -112,7 +112,7 @@ int main(int argc, char *argv[]) {
 	}
 
 	if (strcmp(argv[1], "-e") == 0) {
-		if (getrandom(salt, SALT_LEN, 0) < SALT_LEN) {
+		if (getentropy(salt, SALT_LEN) < SALT_LEN) {
 			error("failed to generate salt");
 			goto fail;
 		}
@@ -134,7 +134,7 @@ int main(int argc, char *argv[]) {
 
 		crypto_argon2i(key, KEY_LEN, work, M_COST, T_COST, master, len, salt, SALT_LEN);
 
-		if (getrandom(nonce, NONCE_LEN, 0) < NONCE_LEN) {
+		if (getentropy(nonce, NONCE_LEN) < NONCE_LEN) {
 			error("failed to generate nonce");
 			goto fail;
 		}
