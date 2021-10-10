@@ -92,23 +92,18 @@ int main(int argc, char *argv[]) {
 
 	/* we want to prevent secret data from being swapped to disk */
 	if (mlock(plain, sizeof(plain)) < 0) {
-		fprintf(stderr, "mlock failed: %s", strerror(errno));
-	}
-
-	if (mlock(cipher, sizeof(cipher)) < 0) {
-		fprintf(stderr, "mlock failed: %s", strerror(errno));
+		perror( "mlock failed");
+		goto fail;
 	}
 
 	if (mlock(master, sizeof(master)) < 0) {
-		fprintf(stderr, "mlock failed: %s", strerror(errno));
+		perror( "mlock failed");
+		goto fail;
 	}
 
 	if (mlock(key, sizeof(key)) < 0) {
-		fprintf(stderr, "mlock failed: %s", strerror(errno));
-	}
-
-	if (mlock(data, sizeof(data)) < 0) {
-		fprintf(stderr, "mlock failed: %s", strerror(errno));
+		perror( "mlock failed");
+		goto fail;
 	}
 
 	if (strcmp(argv[1], "-e") == 0) {
