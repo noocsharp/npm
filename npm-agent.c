@@ -10,6 +10,7 @@
 #include <errno.h>
 #include <limits.h>
 #include <poll.h>
+#include <signal.h>
 #include <stdint.h>
 #include <stdbool.h>
 #include <stdio.h>
@@ -20,7 +21,6 @@
 #include <sys/un.h>
 #include <sys/wait.h>
 #include <unistd.h>
-#include <errno.h>
 
 #include "common.h"
 
