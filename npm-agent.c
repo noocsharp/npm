@@ -16,7 +16,7 @@
 #include <stdlib.h>
 #include <string.h>
 #include <sys/socket.h>
-#include <sys/timerfd.h>
+#include <sys/time.h>
 #include <sys/un.h>
 #include <sys/wait.h>
 #include <unistd.h>
@@ -44,6 +44,7 @@ ssize_t masterlen;
 char *inptr = inbuf;
 size_t inlen;
 struct pollfd fds[3];
+int timerpipe[2];
 
 int
 xwrite(int fd, char *buf, size_t count)
@@ -181,7 +182,7 @@ run_core()
 	return status;
 }
 
-const struct itimerspec timerspec = {
+struct itimerval timerspec = {
 	.it_interval = {0},
 	.it_value = { TIMEOUT/1000, (TIMEOUT % 1000) * 1000 * 1000 },
 };
@@ -195,7 +196,7 @@ agent()
 		if (get_master() != 0)
 			return;
 
-		if (timerfd_settime(fds[TIMER].fd, 0, &timerspec, NULL) == -1) {
+		if (setitimer(ITIMER_REAL, &timerspec, NULL) == -1) {
 			perror("failed to set cache timeout");
 			clear_master();
 			return;
@@ -215,6 +216,18 @@ handler()
 	running = false;
 }
 
+void
+alarm_handler()
+{
+	int ret;
+	while (ret = write(timerpipe[1], "a", 1) < 1) {
+		if (ret == -1) {
+			perror("failed to write to timerpipe");
+			break;
+		}
+	}
+}
+
 int
 main()
 {
@@ -224,12 +237,17 @@ main()
 	};
 	int ret;
 
-	struct sigaction sa = {
+	struct sigaction sa_term = {
 		.sa_handler = handler,
 	};
 
-	sigaction(SIGINT, &sa, NULL);
-	sigaction(SIGTERM, &sa, NULL);
+	struct sigaction sa_alarm = {
+		.sa_handler = alarm_handler,
+	};
+
+	sigaction(SIGINT, &sa_term, NULL);
+	sigaction(SIGTERM, &sa_term, NULL);
+	sigaction(SIGALRM, &sa_alarm, NULL);
 
 	int sock = socket(AF_UNIX, SOCK_STREAM, 0);
 	if (sock == -1) {
@@ -247,20 +265,22 @@ main()
 		goto error;
 	}
 
-	int timer = timerfd_create(CLOCK_MONOTONIC, 0);
-	if (!timer) {
-		perror("failed to create timerfd");
+	if (pipe(timerpipe) == -1) {
+		perror("failed to create timer pipe");
 		goto error;
 	}
 
 	fds[LISTENER].fd = sock;
 	fds[LISTENER].events = POLLIN;
-	fds[TIMER].fd = timer;
+	fds[TIMER].fd = timerpipe[0];
 	fds[TIMER].events = POLLIN;
 	fds[CLIENT].fd = -1;
 
 	while (running) {
 		if (poll(fds, sizeof(fds) / sizeof(fds[0]), -1) == -1) {
+			if (errno == EINTR)
+				continue;
+
 			perror("poll failed");
 			goto error;
 		}
