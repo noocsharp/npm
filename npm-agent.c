@@ -220,7 +220,7 @@ void
 alarm_handler()
 {
 	int ret;
-	while (ret = write(timerpipe[1], "a", 1) < 1) {
+	while ((ret = write(timerpipe[1], "a", 1)) < 1) {
 		if (ret == -1) {
 			perror("failed to write to timerpipe");
 			break;
