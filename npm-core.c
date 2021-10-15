@@ -10,6 +10,7 @@
 
 #include "common.h"
 #include "monocypher.h"
+#include "util.h"
 
 char *argv0;
 
@@ -33,26 +34,6 @@ clear()
 	explicit_bzero(key, sizeof(key));
 	explicit_bzero(nonce, sizeof(nonce));
 	explicit_bzero(data, sizeof(data));
-}
-
-ssize_t
-get_password(uint8_t *buf)
-{
-	int ret;
-	uint8_t *ptr = buf;
-	while (ptr - buf < PASSWORD_MAX_LEN) {
-		ret = fgetc(stdin);
-		if (ret == EOF) {
-			return -1;
-		}
-
-		if (ret == '\n')
-			return ptr - buf;
-
-		*(ptr++) = ret;
-	}
-
-	return -2;
 }
 
 void
@@ -112,7 +93,7 @@ int main(int argc, char *argv[]) {
 			goto fail;
 		}
 
-		switch (len = get_password(master)) {
+		switch (len = get_password(stdin, master)) {
 		case -1:
 			error("encountered EOF when reading master password");
 			goto fail;
@@ -134,7 +115,7 @@ int main(int argc, char *argv[]) {
 			goto fail;
 		}
 
-		switch (len = get_password(plain)) {
+		switch (len = get_password(stdin, plain)) {
 		case -1:
 			error("encountered EOF when reading password");
 			goto fail;
@@ -180,7 +161,7 @@ int main(int argc, char *argv[]) {
 			goto fail;
 		}
 
-		switch (len = get_password(master)) {
+		switch (len = get_password(stdin, master)) {
 		case -1:
 			error("encountered EOF when reading master password");
 			goto fail;

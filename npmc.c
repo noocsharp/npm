@@ -12,6 +12,7 @@
 #include <errno.h>
 
 #include "common.h"
+#include "util.h"
 
 char answer[PASSWORD_MAX_LEN + 1];
 int answerlen = 0;
@@ -19,45 +20,9 @@ int answerlen = 0;
 char abspath[PATH_MAX];
 
 int
-xwrite(int fd, char *buf, size_t count)
-{
-	ssize_t ret;
-	char *ptr = buf;
-	while (count) {
-		ret = write(fd, ptr, count);
-		if (ret == -1)
-			return -1;
-
-		count -= ret;
-		ptr += ret;
-	}
-
-	return count;
-}
-
-int
-read_answer(int fd)
-{
-	ssize_t ret;
-	char *ptr = answer;
-	while (answerlen <= PASSWORD_MAX_LEN && !memchr(answer, '\n', answerlen)) {
-		ret = read(fd, ptr, PASSWORD_MAX_LEN - answerlen);
-		if (ret == -1)
-			return ret;
-
-		if (ret == 0)
-			break;
-
-		answerlen += ret;
-		ptr += ret;
-	}
-
-	return answerlen;
-}
-
-int
 main(int argc, char *argv[])
 {
+	FILE *sockfile;
 	const struct sockaddr_un sockaddr = {
 		.sun_family = AF_UNIX,
 		.sun_path = SOCKPATH
@@ -83,13 +48,19 @@ main(int argc, char *argv[])
 
 	xwrite(sock, abspath, strlen(abspath) + 1); // include terminator
 
-	read_answer(sock);
+	sockfile = fdopen(sock, "rw");
+	if (!sockfile) {
+		perror("failed to open socket as FILE");
+		close(sock);
+		goto end;
+	}
 
+	get_password(sockfile, answer);
 	if (*answer)
 		printf("%s", answer);
 
 closesock:
-	close(sock);
+	fclose(sockfile);
 end:
 	return !(*answer);
 }

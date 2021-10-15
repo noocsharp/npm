@@ -23,6 +23,7 @@
 #include <unistd.h>
 
 #include "common.h"
+#include "util.h"
 
 #ifndef TIMEOUT
 #define TIMEOUT 10000
@@ -39,48 +40,12 @@ char *const getpasscmd[] = { "bemenu", "-x", "-p", "Password:", NULL };
 bool cached = false;
 
 char inbuf[PATH_MAX];
-char master[PASSWORD_MAX_LEN + 1];
+char master[PASSWORD_MAX_LEN + 2];
 ssize_t masterlen;
 char *inptr = inbuf;
 size_t inlen;
 struct pollfd fds[3];
 int timerpipe[2];
-
-int
-xwrite(int fd, char *buf, size_t count)
-{
-	ssize_t ret;
-	char *ptr = buf;
-	while (count) {
-		ret = write(fd, ptr, count);
-		if (ret == -1)
-			return -1;
-
-		count -= ret;
-		ptr += ret;
-	}
-
-	return count;
-}
-
-int
-read_to_nl(int fd, char *buf)
-{
-	ssize_t ret;
-	size_t len = 0;
-	char *ptr = buf;
-
-	do {
-		ret = read(fd, ptr, PASSWORD_MAX_LEN - len);
-		if (ret == -1)
-			return ret;
-
-		len += ret;
-		ptr += ret;
-	} while (ret && len <= PASSWORD_MAX_LEN && !memchr(ptr, '\n', ret));
-
-	return len;
-}
 
 void
 clear_master()
@@ -124,12 +89,21 @@ get_master()
 		close(stdoutpipe[1]);
 		close(stdinpipe[0]);
 		close(stdinpipe[1]);
+		FILE *stdoutfile = fdopen(stdoutpipe[0], "r");
+		if (!stdoutfile) {
+			perror("failed to open npm-core stdout as FILE");
+			goto here;
+		}
 
-		if ((masterlen = read_to_nl(stdoutpipe[0], master)) == -1) {
+		if ((masterlen = get_password(stdoutfile, master)) == -1) {
 			fprintf(stderr, "failed to read password from pipe\n");
 			return -1;
 		}
 
+		master[masterlen++] = '\n';
+
+here:
+		fclose(stdoutfile);
 		close(stdoutpipe[0]);
 		waitpid(pid, &status, 0);
 	}
