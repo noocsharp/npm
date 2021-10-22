@@ -142,7 +142,7 @@ run_core()
 	default:
 		close(stdinpipe[0]);
 
-		FILE *stdinfile = fdopen(stdinpipe[1], "r");
+		FILE *stdinfile = fdopen(stdinpipe[1], "w");
 		if (!stdinfile) {
 			perror("failed to open npm-core stdin as FILE");
 			close(stdinpipe[1]);
