@@ -231,7 +231,7 @@ main()
 
 	if (bind(sock, (struct sockaddr *) &sockaddr, sizeof(sockaddr)) == -1) {
 		perror("failed to bind to socket");
-		goto error;
+		goto error_socket;
 	}
 
 	if (listen(sock, 50) == -1) {
@@ -309,8 +309,8 @@ main()
 	}
 
 error:
-	close(sock);
-error_socket:
 	unlink(SOCKPATH);
+error_socket:
+	close(sock);
 	return 1;
 }
