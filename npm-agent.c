@@ -23,6 +23,7 @@
 #include <unistd.h>
 
 #include "common.h"
+#include "config.h"
 #include "util.h"
 
 #ifndef TIMEOUT
@@ -34,8 +35,6 @@
 #define CLIENT 2
 
 char *corecmd[] = { NPM_CORE, "-d", NULL, NULL };
-//char *const getpasscmd[] = { "dmenu", "-P", "-p", "Password:", NULL };
-char *const getpasscmd[] = { "bemenu", "-x", "-p", "Password:", NULL };
 
 bool cached = false;
 
@@ -143,13 +142,21 @@ run_core()
 	default:
 		close(stdinpipe[0]);
 
-		if (xwrite(stdinpipe[1], master, masterlen) == -1) {
+		FILE *stdinfile = fdopen(stdinpipe[1], "r");
+		if (!stdinfile) {
+			perror("failed to open npm-core stdin as FILE");
+			close(stdinpipe[1]);
+			goto here;
+		}
+
+		if (fwrite(master, 1, masterlen, stdinfile) == -1) {
 			perror("failed to write master password to pipe");
 			return 1;
 		}
 
-		close(stdinpipe[1]);
+		fclose(stdinfile);
 
+here:
 		waitpid(pid, &status, 0);
 	}
 

@@ -9,6 +9,11 @@ NPM_CORE = "npm-core"
 
 all: npm-core npm-agent npmc
 
+$(OBJ): config.h
+
+config.h: config.def.h
+	cp $< $@
+
 npm-core: npm-core.o monocypher.o util.o
 	$(CC) $(LDFLAGS) npm-core.o monocypher.o util.o -o $@
 

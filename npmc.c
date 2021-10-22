@@ -12,6 +12,7 @@
 #include <errno.h>
 
 #include "common.h"
+#include "config.h"
 #include "util.h"
 
 char answer[PASSWORD_MAX_LEN + 1];

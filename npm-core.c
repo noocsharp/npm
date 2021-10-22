@@ -9,6 +9,7 @@
 #include <unistd.h>
 
 #include "common.h"
+#include "config.h"
 #include "monocypher.h"
 #include "util.h"
 
