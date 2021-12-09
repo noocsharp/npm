@@ -75,17 +75,17 @@ int main(int argc, char *argv[])
 
 	/* we want to prevent secret data from being swapped to disk */
 	if (mlock(plain, sizeof(plain)) < 0) {
-		perror( "mlock failed");
+		perror("mlock failed");
 		goto fail;
 	}
 
 	if (mlock(master, sizeof(master)) < 0) {
-		perror( "mlock failed");
+		perror("mlock failed");
 		goto fail;
 	}
 
 	if (mlock(key, sizeof(key)) < 0) {
-		perror( "mlock failed");
+		perror("mlock failed");
 		goto fail;
 	}
 
