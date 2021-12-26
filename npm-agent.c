@@ -16,6 +16,7 @@
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
+#include <sys/mman.h>
 #include <sys/socket.h>
 #include <sys/time.h>
 #include <sys/un.h>
@@ -226,9 +227,11 @@ main()
 		.sa_handler = alarm_handler,
 	};
 
-	sigaction(SIGINT, &sa_term, NULL);
-	sigaction(SIGTERM, &sa_term, NULL);
-	sigaction(SIGALRM, &sa_alarm, NULL);
+
+	if (mlock(master, sizeof(master)) == -1) {
+		perror("failed to mlock master buffer");
+		goto error;
+	}
 
 	int sock = socket(AF_UNIX, SOCK_STREAM, 0);
 	if (sock == -1) {
@@ -319,5 +322,6 @@ error:
 	unlink(SOCKPATH);
 error_socket:
 	close(sock);
+	clear_master();
 	return 1;
 }
