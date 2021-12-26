@@ -227,9 +227,23 @@ main()
 		.sa_handler = alarm_handler,
 	};
 
-
 	if (mlock(master, sizeof(master)) == -1) {
 		perror("failed to mlock master buffer");
+		goto error;
+	}
+
+	if (sigaction(SIGINT, &sa_term, NULL) == -1) {
+		perror("sigaction(SIGINT)");
+		goto error;
+	}
+
+	if (sigaction(SIGTERM, &sa_term, NULL) == -1) {
+		perror("sigaction(SIGTERM)");
+		goto error;
+	}
+
+	if (sigaction(SIGALRM, &sa_alarm, NULL) == -1) {
+		perror("sigaction(SIGALRM)");
 		goto error;
 	}
 
