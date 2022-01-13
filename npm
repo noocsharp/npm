@@ -23,9 +23,9 @@
 # CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
 
 master_check() {
-    result=$("$core" -d .npmcheck <<-EOF
-    $1
-    EOF
+	result=$("$core" -d .npmcheck <<-EOF
+	$1
+	EOF
     )
     [ "$result" = "password" ]
 }
@@ -71,10 +71,10 @@ pw_add() {
     # however this is typically done using 'mkstemp()' which
     # is more secure than '/proc'.
     "$core" -e > "$name.npm" <<-EOF && \
-        printf '%s\n' "Saved '$name' to the store."
-        $master
-        $pass
-    EOF
+		printf '%s\n' "Saved '$name' to the store."
+		$master
+		$pass
+	EOF
 }
 
 pw_del() {
@@ -127,9 +127,9 @@ pw_init() {
     sread master2 "Confirm master password"
     [ "$master" = "$master2" ] || die "Passwords do not match"
     $core -e > .npmcheck <<-EOF
-        $master
-        password
-    EOF
+		$master
+		password
+	EOF
 }
 
 yn() {
