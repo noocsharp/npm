@@ -23,11 +23,11 @@
 # CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
 
 master_check() {
-	result=$("$core" -d .npmcheck <<-EOF
-	$1
-	EOF
-	)
-	[ "$result" = "password" ]
+    result=$("$core" -d .npmcheck <<-EOF
+    $1
+    EOF
+    )
+    [ "$result" = "password" ]
 }
 
 pw_add() {
@@ -72,9 +72,9 @@ pw_add() {
     # is more secure than '/proc'.
     "$core" -e > "$name.npm" <<-EOF && \
         printf '%s\n' "Saved '$name' to the store."
-		$master
-		$pass
-	EOF
+        $master
+        $pass
+    EOF
 }
 
 pw_del() {
@@ -121,15 +121,15 @@ pw_tree() {
 }
 
 pw_init() {
-	[ -e .npmcheck ] && die ".npmcheck already exists"
+    [ -e .npmcheck ] && die ".npmcheck already exists"
 
     sread master "Enter master password"
     sread master2 "Confirm master password"
     [ "$master" = "$master2" ] || die "Passwords do not match"
     $core -e > .npmcheck <<-EOF
-		$master
-		password
-	EOF
+        $master
+        password
+    EOF
 }
 
 yn() {
@@ -190,6 +190,7 @@ npm - simple password manager.
 => [a]dd  [name] - Create a new password entry.
 => [c]opy [name] - Copy entry to the clipboard.
 => [d]el  [name] - Delete a password entry.
+=> [i]nit        - Initialize password repository.
 => [l]ist        - List all entries.
 => [s]how [name] - Show password for an entry.
 => [t]ree        - List all entries in a tree.
@@ -222,13 +223,16 @@ main() {
     cd "$NPM_DIR" ||
         die "Can't access password directory"
 
+    glob "$1" '[acds]*' && [ ! -e ".npmcheck" ] &&
+        die "Password repository is uninitialized"
+
     glob "$1" '[acds]*' && [ -z "$2" ] &&
         die "Missing [name] argument"
 
     glob "$1" '[cds]*' && [ ! -f "$2.npm" ] &&
         die "Pass file '$2' doesn't exist"
 
-glob "$1" 'a*' && [ -f "$2.npm" ] &&
+    glob "$1" 'a*' && [ -f "$2.npm" ] &&
         die "Pass file '$2' already exists"
 
     glob "$2" '*/*' && glob "$2" '*../*' &&
