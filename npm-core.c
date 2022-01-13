@@ -50,7 +50,8 @@ usage()
 	exit(1);
 }
 
-int main(int argc, char *argv[])
+int
+main(int argc, char *argv[])
 {
 	size_t len;
 	FILE *file = NULL;
