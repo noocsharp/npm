@@ -1,0 +1,36 @@
+.Dd 2020-07-30
+.Dt NPM-CORE 1
+.Os
+.Sh NAME
+.Nm npm-core
+.Nd the npm cryptographic core
+.Sh SYNOPSIS
+.Nm
+.Fl e
+.Nm
+.Fl d Ar file
+.Sh DESCRIPTION
+.Nm
+performs cryptographic operations on behalf of
+.Xr npm 1 .
+.Nm
+operates in two modes:
+.IP "\fBencryption\fP" 10
+In encryption mode, it reads a newline terminated master password,
+followed by a newline terminated password. The password is then
+encrypted using the master password, and written to standard out.
+.Sh CONFIGURATION
+TLS parameters can be configured by modifying config.h. See
+.Xr tls_config_set_protocols 3
+for details on the values that various parameters can take.
+.Sh SEE ALSO
+.Xr ssl 3 ,
+.Xr tcp 7 ,
+.Xr tls_init 3
+.Sh AUTHORS
+.An Nihal Jere Aq Mt nihal@nihaljere.xyz
+.Sh CAVEATS
+Note that
+.Nm
+can listen on and forward to both unix-domain sockets and network sockets.
+However, it can only use one backend socket and one frontend socket at a time.
