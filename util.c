@@ -29,11 +29,12 @@ get_password(FILE *f, char *buf)
 	char *ptr = buf;
 	while (ptr - buf < PASSWORD_MAX_LEN) {
 		ret = fgetc(f);
-		if (ret == EOF)
-			return -1;
-
-		if (ret == '\n')
-			return ptr - buf;
+		if (ret == EOF) {
+			if (ptr > buf && *(ptr - 1) == '\n')
+				return ptr - buf - 1;
+			else
+				return ptr - buf;
+		}
 
 		*(ptr++) = ret;
 	}
