@@ -12,7 +12,7 @@ all: npm-core npm-agent npmc
 $(OBJ): config.h
 
 config.h: config.def.h
-	cp $< $@
+	cp config.def.h $@
 
 npm-core: npm-core.o monocypher.o util.o
 	$(CC) $(LDFLAGS) npm-core.o monocypher.o util.o -o $@
@@ -24,10 +24,11 @@ npmc: npmc.o util.o
 	$(CC) $(LDFLAGS) npmc.o util.o -o $@
 
 npm-agent.o: npm-agent.c
-	$(CC) '-DNPM_CORE=$(NPM_CORE)' $(CFLAGS) -c $< -o $@
+	$(CC) '-DNPM_CORE=$(NPM_CORE)' $(CFLAGS) -c npm-agent.c -o $@
 
 install:
-	install -Dm755 -t $(DESTDIR)$(PREFIX)/bin npm npm-core npmc npm-agent
+	mkdir -p $(DESTDIR)$(PREFIX)/bin
+	install -Dm755 npm npm-core npmc npm-agent $(DESTDIR)$(PREFIX)/bin
 
 clean:
 	rm -f $(OBJ) $(EXE)
