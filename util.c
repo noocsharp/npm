@@ -34,6 +34,8 @@ get_password(FILE *f, char *buf)
 				return ptr - buf - 1;
 			else
 				return ptr - buf;
+		} else if (ret == '\n') {
+			return ptr - buf;
 		}
 
 		*(ptr++) = ret;
