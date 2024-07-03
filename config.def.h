@@ -12,4 +12,4 @@
 #define SOCKPATH "/tmp/npm-agent"
 #endif
 
-char *const getpasscmd[] = { "bemenu", "-x", "-p", "Password:", NULL };
+char *const getpasscmd[] = { "bemenu", "-xindicator", "-p", "Password:", NULL };
