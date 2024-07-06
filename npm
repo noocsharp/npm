@@ -84,8 +84,16 @@ pw_del() {
     }
 }
 
-pw_show() {
+pw_show_agent() {
     [ "$("$npmc" .npmcheck)" = "password" ] && "$npmc" "$1.npm"
+}
+
+pw_show_direct() {
+    sread master "Enter master password"
+    master_check "$master" || die "Invalid master password"
+    "$core" -d $1.npm <<-EOF
+		$master
+	EOF
 }
 
 pw_copy() {
@@ -106,7 +114,7 @@ pw_copy() {
         $NPM_CLIP </dev/null
     } &
 
-    pw_show "$1" | $NPM_CLIP
+    $pw_show "$1" | $NPM_CLIP
 }
 
 pw_list() {
@@ -207,6 +215,13 @@ exit 1
 
 main() {
     : "${NPM_DIR:=${XDG_DATA_HOME:=$HOME/.local/share}/npm}"
+    : "${NPM_NO_AGENT:=0}"
+
+    if [ "$NPM_NO_AGENT" = 1 ]; then
+        pw_show=pw_show_direct
+    else
+        pw_show=pw_show_agent
+    fi
 
     [ "$1" = '-?' ] || [ -z "$1" ] &&
         usage
@@ -256,7 +271,7 @@ main() {
         a*) pw_add  "$2" ;;
         c*) pw_copy "$2" ;;
         d*) pw_del  "$2" ;;
-        s*) pw_show "$2" ;;
+        s*) $pw_show "$2" ;;
         i*) pw_init ;;
         l*) pw_list ;;
         t*) pw_tree ;;
