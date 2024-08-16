@@ -114,7 +114,16 @@ pw_copy() {
         $NPM_CLIP </dev/null
     } &
 
-    $pw_show "$1" | $NPM_CLIP
+    if [ "$NPM_NO_AGENT" = 1 ]; then
+		sleep 0.1
+        sread master "Enter master password"
+        master_check "$master" || die "Invalid master password"
+        "$core" -d $1.npm <<-EOF
+			$master
+		EOF
+    else
+        pw_show "$1" | $NPM_CLIP
+    fi
 }
 
 pw_list() {
