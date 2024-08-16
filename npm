@@ -118,11 +118,12 @@ pw_copy() {
 		sleep 0.1
         sread master "Enter master password"
         master_check "$master" || die "Invalid master password"
-        "$core" -d $1.npm <<-EOF
+        "$core" -d $1.npm <<-EOF | $NPM_CLIP
 			$master
 		EOF
+
     else
-        pw_show "$1" | $NPM_CLIP
+        pw_show_agent "$1" | $NPM_CLIP
     fi
 }
 
