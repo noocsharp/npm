@@ -213,7 +213,6 @@ npm - simple password manager.
 => [s]how [name] - Show password for an entry.
 => [t]ree        - List all entries in a tree.
 
-Using a key pair:  export NPM_KEYID=XXXXXXXX
 Password length:   export NPM_LENGTH=50
 Password pattern:  export NPM_PATTERN=_A-Z-a-z-0-9
 Store location:    export NPM_DIR=~/.local/share/npm
