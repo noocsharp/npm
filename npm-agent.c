@@ -215,8 +215,9 @@ main()
 {
 	struct sockaddr_un sockaddr = {
 		.sun_family = AF_UNIX,
-		.sun_path = SOCKPATH
 	};
+
+	snprintf(sockaddr.sun_path, sizeof(sockaddr.sun_path) / sizeof(char), SOCKPATH "-%d", getuid());
 	int ret;
 
 	struct sigaction sa_term = {

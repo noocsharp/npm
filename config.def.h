@@ -8,6 +8,7 @@
 #define T_COST 250
 #define M_COST 1024 // 1 mibibyte
 
+// npm-agent SOCKPATH - uid is appended to the end
 #ifndef SOCKPATH
 #define SOCKPATH "/tmp/npm-agent"
 #endif

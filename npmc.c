@@ -23,10 +23,11 @@ char abspath[PATH_MAX];
 int
 main(int argc, char *argv[])
 {
-	const struct sockaddr_un sockaddr = {
+	struct sockaddr_un sockaddr = {
 		.sun_family = AF_UNIX,
-		.sun_path = SOCKPATH
 	};
+
+	snprintf(sockaddr.sun_path, sizeof(sockaddr.sun_path) / sizeof(char), SOCKPATH "-%d", getuid());
 
 	if (argc != 2)
 		return 1;
