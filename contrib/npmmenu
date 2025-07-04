@@ -1,0 +1,5 @@
+#!/bin/sh
+
+menu="fuzzel --dmenu"
+
+npm c $(npm l | $menu)
