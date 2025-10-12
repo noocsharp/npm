@@ -334,7 +334,7 @@ main()
 	}
 
 error:
-	unlink(SOCKPATH);
+	unlink(sockaddr.sun_path);
 error_socket:
 	close(sock);
 	clear_master();
