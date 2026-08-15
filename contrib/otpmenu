@@ -1,0 +1,5 @@
+#!/bin/sh
+
+menu="fuzzel --dmenu"
+
+oathtool --totp -b $(npm s $(npm l | grep "^totp" | $menu))
